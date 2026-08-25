@@ -12,6 +12,8 @@ photos from each event (photos expire 30 days after the event).
 
 ## Deploy (no terminal)
 
+Step-by-step instructions for a non-technical organiser — including what to paste into ChatGPT so it can act as your help desk — are in **[HELP.md](HELP.md)**.
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dilioolio/group-site)
 
 1. Click the button, sign in to Cloudflare (free account is fine). Cloudflare
