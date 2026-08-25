@@ -20,7 +20,7 @@ photos from each event (photos expire 30 days after the event).
 2. Open the URL Cloudflare gives you. The site redirects to **/setup** and asks
    for: site name, your first name, an admin password, a sending email address
    on a domain you own, a [Resend](https://resend.com) API key, and your timezone.
-3. Done. Log in at **/admin** and create your first event.
+3. Done. Log in at **/admin** and create your first event. **Settings** (top right) has categories (e.g. Hikes / Conversations), colours, home-screen icon, background image, and your email/password.
 
 The Worker creates its own database tables on the first request and generates
 its own signing and push (VAPID) keys during setup — there are no secrets to

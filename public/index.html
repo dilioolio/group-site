@@ -130,9 +130,13 @@
     const { scene, seed } = sceneFor(ev.id);
     return `data-scene="${scene}" data-seed="${seed}"`;
   }
+  // Organiser photo, else the category's image (Settings → Categories), else generative scene.
+  function heroSrc(ev) {
+    return ev.primary_image_key ? `/img/${ev.primary_image_key}` : (catById[ev.category]?.image || null);
+  }
   function featuredImageOverlay(ev) {
-    if (!ev.primary_image_key) return "";
-    return `<img src="/img/${ev.primary_image_key}" alt="${escapeHtml(ev.title)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1">`;
+    if (!heroSrc(ev)) return "";
+    return `<img src="${heroSrc(ev)}" alt="${escapeHtml(ev.title)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1">`;
   }
 
   function shortDate(iso) {
@@ -189,8 +193,8 @@
     const isPrevious = opts.bucket === "previous";
     const sceneClass = isCancelled ? "scene cancelled" : "scene";
     const label = ev.location || "";
-    const inner = ev.primary_image_key
-      ? `<img src="/img/${ev.primary_image_key}" alt="${escapeHtml(ev.title)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
+    const inner = heroSrc(ev)
+      ? `<img src="${heroSrc(ev)}" alt="${escapeHtml(ev.title)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
          ${label ? `<span class="label">${escapeHtml(label)}</span>` : ""}`
       : (() => {
           const { scene, seed } = sceneFor(ev.id);
@@ -210,7 +214,7 @@
     const card = document.createElement("a");
     card.className = "card event-card";
     card.href = `/event/${ev.id}`;
-    if (ev.primary_image_key) {
+    if (heroSrc(ev)) {
       card.innerHTML = `
         <div class="${sceneClass}" style="position:relative">
           ${inner}
