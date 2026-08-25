@@ -14,6 +14,8 @@ export function requireGalleryToken() {
       c.req.query("token");
     const res = await verifyGalleryToken(token, eventId, c.env.SESSION_SIGNING_KEY);
     if (!res.ok) return c.json({ error: "access_denied", reason: res.reason }, 401);
+    const ev = await c.env.DB.prepare("SELECT gallery_enabled FROM events WHERE id = ?").bind(eventId).first();
+    if (!ev || !ev.gallery_enabled) return c.json({ error: "gallery_disabled" }, 403);
     c.set("memberEmail", res.email);
     await next();
   };

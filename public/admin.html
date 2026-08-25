@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin — Daniel's Hikes</title>
+  <title>Admin — Group Site</title>
   <meta name="theme-color" content="#2C6A49">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/site.css" id="site-css">
   <style>
     /* Login. */
     .login-card { max-width: 420px; margin: 60px auto; padding: 28px; }
@@ -60,6 +61,10 @@
 
     .empty-filler { padding: 18px 22px; color: var(--muted); font-size: 14.5px; text-align: center; }
 
+    .spane { display: none; } .spane.on { display: block; }
+    .asset-row { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .asset-ctl { display: flex; gap: 8px; align-items: center; }
+
     .ev-suppress-label { display: flex; gap: 9px; align-items: center; margin-top: 16px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
 
   </style>
@@ -68,8 +73,9 @@
 
 <header class="topbar">
   <div class="wrap bar">
-    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <a class="brand" href="/"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></a>
     <nav class="navset">
+      <a href="#" id="settings-btn" style="display:none">Settings</a>
       <a href="#" id="help-btn">? Help</a>
       <a href="#" id="logout" style="color:var(--persimmon);font-weight:600;display:none">Log out</a>
     </nav>
@@ -98,7 +104,7 @@
           <h1 class="display" style="font-size:clamp(28px,4vw,38px);margin-top:8px">Dashboard</h1>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
-          <button class="btn" id="new-event-btn">+ New hike</button>
+          <button class="btn" id="new-event-btn">+ New event</button>
         </div>
       </div>
       <div class="stack" id="events-list" style="gap:14px"></div>
@@ -108,8 +114,8 @@
     <section id="editor" style="display:none">
       <div class="shead">
         <div>
-          <div class="eyebrow"><span class="dot"></span> Editing hike</div>
-          <h1 class="display" id="editor-title" style="font-size:clamp(26px,3.6vw,34px);margin-top:8px">Edit hike</h1>
+          <div class="eyebrow"><span class="dot"></span> Editing event</div>
+          <h1 class="display" id="editor-title" style="font-size:clamp(26px,3.6vw,34px);margin-top:8px">Edit event</h1>
         </div>
       </div>
 
@@ -138,6 +144,11 @@
                 <select class="select" id="ev-year" required></select>
               </div>
 
+              <div id="ev-category-row">
+                <label class="field-l" for="ev-category" style="margin-top:14px">Category</label>
+                <select class="select" id="ev-category" style="max-width:260px"></select>
+              </div>
+
               <label class="field-l" for="ev-location" style="margin-top:14px">Meetup location</label>
               <input class="input" id="ev-location" type="text" required>
 
@@ -151,6 +162,10 @@
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+
+              <label class="ev-suppress-label" style="margin-top:14px">
+                <input type="checkbox" id="ev-gallery" checked> Members can share photos for this event (private gallery)
+              </label>
 
               <label id="ev-suppress-row" class="ev-suppress-label">
                 <input type="checkbox" id="ev-suppress"> Suppress change notifications for this save
@@ -187,7 +202,7 @@
       <section class="pane" data-pane="rsvps">
         <div class="card" style="padding:20px;margin-bottom:20px">
           <h3 class="display" style="font-size:20px;margin:0 0 4px">Invite by email</h3>
-          <p class="meta" style="font-size:13.5px;margin:0 0 12px">One per line or comma-separated. Each gets a link to this hike — they still RSVP themselves.</p>
+          <p class="meta" style="font-size:13.5px;margin:0 0 12px">One per line or comma-separated. Each gets a link to this event — they still RSVP themselves.</p>
           <textarea class="textarea" id="invite-emails" placeholder="alice@email.com&#10;bob@email.com"></textarea>
           <div style="display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap">
             <button class="btn" id="invite-send">Send invitations</button>
@@ -231,17 +246,111 @@
         <div id="bcast-list" class="stack" style="gap:14px"></div>
       </section>
     </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" style="display:none">
+      <div class="shead">
+        <div>
+          <div class="eyebrow"><span class="dot"></span> Site</div>
+          <h1 class="display" style="font-size:clamp(26px,3.6vw,34px);margin-top:8px">Settings</h1>
+        </div>
+        <button class="btn ghost" id="settings-back">Back</button>
+      </div>
+
+      <div class="tabbar" id="settings-tabs">
+        <div class="t on" data-stab="general">General</div>
+        <div class="t" data-stab="categories">Categories</div>
+        <div class="t" data-stab="appearance">Appearance</div>
+        <div class="t" data-stab="account">Email &amp; password</div>
+      </div>
+
+      <section class="spane on" data-spane="general">
+        <div class="card" style="padding:22px;max-width:620px">
+          <label class="field-l" for="s-site-name">Site name</label>
+          <input class="input" id="s-site-name" maxlength="80">
+          <label class="field-l" for="s-tagline" style="margin-top:14px">Tagline <span class="muted" style="font-weight:400">· optional, shown under the name on the home page</span></label>
+          <input class="input" id="s-tagline" maxlength="80">
+          <label class="field-l" for="s-seal" style="margin-top:14px">Badge <span class="muted" style="font-weight:400">· 1–2 characters or an emoji, shown next to the site name</span></label>
+          <input class="input" id="s-seal" maxlength="2" style="max-width:100px">
+          <label class="field-l" for="s-admin-name" style="margin-top:14px">Your first name <span class="muted" style="font-weight:400">· signs the emails</span></label>
+          <input class="input" id="s-admin-name" maxlength="80">
+          <label class="field-l" for="s-timezone" style="margin-top:14px">Timezone</label>
+          <input class="input" id="s-timezone" placeholder="Europe/Dublin">
+          <div style="display:flex;gap:12px;margin-top:20px"><button class="btn" id="s-save-general">Save</button></div>
+          <div id="s-general-msg" class="notice" style="display:none;margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section class="spane" data-spane="categories">
+        <div class="card" style="padding:22px;max-width:720px">
+          <p class="meta" style="margin:0 0 14px">Categories show as filter tabs on the home page (only when there's more than one). Each event belongs to one. "Photos" sets whether new events in that category get a member photo gallery by default — you can still change it per event.</p>
+          <div id="cat-list" class="stack" style="gap:10px"></div>
+          <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn soft" id="cat-add">+ Add category</button>
+            <button class="btn" id="s-save-cats">Save categories</button>
+          </div>
+          <div id="s-cats-msg" class="notice" style="display:none;margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section class="spane" data-spane="appearance">
+        <div class="card" style="padding:22px;max-width:720px">
+          <div class="eyebrow"><span class="dot"></span> Colours</div>
+          <p class="meta" style="margin:8px 0 12px">Pick a preset or set your own. Changes apply to the whole site as soon as you save.</p>
+          <div id="presets" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap">
+            <label class="field-l">Main colour<br><input type="color" id="s-color-primary" style="width:64px;height:40px;border:1px solid var(--line);border-radius:8px;background:none;margin-top:6px"></label>
+            <label class="field-l">Highlight<br><input type="color" id="s-color-accent" style="width:64px;height:40px;border:1px solid var(--line);border-radius:8px;background:none;margin-top:6px"></label>
+            <label class="field-l">Background<br><input type="color" id="s-color-bg" style="width:64px;height:40px;border:1px solid var(--line);border-radius:8px;background:none;margin-top:6px"></label>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:18px;flex-wrap:wrap">
+            <button class="btn" id="s-save-colors">Save colours</button>
+            <button class="btn ghost" id="s-reset-colors">Back to default</button>
+          </div>
+          <div id="s-colors-msg" class="notice" style="display:none;margin-top:14px"></div>
+
+          <hr style="border:0;border-top:1px solid var(--line);margin:24px 0">
+          <div class="eyebrow"><span class="dot"></span> Images</div>
+          <div class="stack" style="gap:16px;margin-top:10px">
+            <div class="asset-row" data-asset="icon">
+              <div><b>Home-screen icon</b><div class="meta" style="font-size:13px">Square image, resized to 512 and 192 px automatically. Shown when someone adds the site to their phone.</div></div>
+              <div class="asset-ctl"><img class="asset-prev" alt="" style="width:56px;height:56px;border-radius:12px;object-fit:cover;display:none"><input type="file" accept="image/*" style="display:none"><button class="btn soft sm" data-pick>Upload</button><button class="btn ghost sm" data-remove style="display:none">Remove</button></div>
+            </div>
+            <div class="asset-row" data-asset="background">
+              <div><b>Background image</b><div class="meta" style="font-size:13px">Optional. Covers the page behind the cards; resized to 1920 px wide.</div></div>
+              <div class="asset-ctl"><img class="asset-prev" alt="" style="width:96px;height:56px;border-radius:8px;object-fit:cover;display:none"><input type="file" accept="image/*" style="display:none"><button class="btn soft sm" data-pick>Upload</button><button class="btn ghost sm" data-remove style="display:none">Remove</button></div>
+            </div>
+          </div>
+          <div id="s-assets-msg" class="notice" style="display:none;margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section class="spane" data-spane="account">
+        <div class="card" style="padding:22px;max-width:620px">
+          <label class="field-l" for="s-from-email">Sending address</label>
+          <input class="input" id="s-from-email" type="email">
+          <label class="field-l" for="s-reply-to" style="margin-top:14px">Reply-to address <span class="muted" style="font-weight:400">· optional</span></label>
+          <input class="input" id="s-reply-to" type="email">
+          <label class="field-l" for="s-resend-key" style="margin-top:14px">Resend API key <span class="muted" id="s-resend-state" style="font-weight:400"></span></label>
+          <input class="input" id="s-resend-key" placeholder="Leave blank to keep the current key" autocomplete="off">
+          <label class="field-l" for="s-password" style="margin-top:14px">New admin password <span class="muted" style="font-weight:400">· leave blank to keep</span></label>
+          <input class="input" id="s-password" type="password" minlength="8" autocomplete="new-password">
+          <div style="display:flex;gap:12px;margin-top:20px"><button class="btn" id="s-save-account">Save</button></div>
+          <div id="s-account-msg" class="notice" style="display:none;margin-top:14px"></div>
+        </div>
+      </section>
+    </section>
   </div>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
+    <div class="brand"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></div>
     <span class="muted">Admin · changes to date, place or status auto-notify attendees</span>
   </div>
 </footer>
 
-<!-- Cancel-hike dialog -->
+<!-- Cancel-event dialog -->
 <dialog id="cancel-dialog" class="cancel-dialog">
   <form id="cancel-form" method="dialog">
     <h2>Cancel <span id="cancel-title"></span>?</h2>
@@ -275,31 +384,39 @@
       <button type="button" class="btn ghost sm" id="help-close" aria-label="Close">Close</button>
     </div>
 
-    <h3>Creating &amp; editing a hike</h3>
+    <h3>Creating &amp; editing an event</h3>
     <ul>
       <li>You must fill in <strong>title, date/time, meetup location, and a description of at least 20 characters</strong>. Save is blocked until all of those are set.</li>
       <li>Date / time pickers default to today's month/year and 09:00 — only the day is left blank for you to pick. Time is in 5-minute increments.</li>
-      <li>Two active hikes can't share the same start time. Cancelled hikes don't block the slot.</li>
+      <li>Two active events can't share the same start time. Cancelled events don't block the slot.</li>
     </ul>
 
-    <h3>Photos on a hike</h3>
+    <h3>Settings (top-right)</h3>
     <ul>
-      <li>For a new hike, save the basic details first — the photo uploader unlocks after that.</li>
+      <li><strong>General</strong> — site name, tagline, badge, your name, timezone.</li>
+      <li><strong>Categories</strong> — e.g. Hikes and Conversations. Shown as tabs on the home page when you have more than one. Each can have its own image and a default for whether events get a photo gallery.</li>
+      <li><strong>Appearance</strong> — colour presets or your own three colours, home-screen icon, background image.</li>
+      <li><strong>Email &amp; password</strong> — sending address, reply-to, Resend key, admin password.</li>
+    </ul>
+
+    <h3>Photos on an event</h3>
+    <ul>
+      <li>For a new event, save the basic details first — the photo uploader unlocks after that.</li>
       <li>Photos upload instantly when you pick them. Save is disabled while an upload is in progress.</li>
       <li>After upload, <strong>click any photo</strong> to make it the primary one (shown on event cards and the hero image). The primary has a green border and a ★.</li>
       <li>Save is blocked if photos exist but none is primary.</li>
     </ul>
 
-    <h3>Cancelling a hike</h3>
+    <h3>Cancelling an event</h3>
     <ul>
-      <li>Each active hike has a red <strong>Cancel</strong> button on the dashboard.</li>
+      <li>Each active event has a red <strong>Cancel</strong> button on the dashboard.</li>
       <li>You pick a reason (5 common options + Other up to 30 characters). The reason goes to attendees as part of the cancellation email and push.</li>
-      <li>Cancelled hikes show a big diagonal CANCELLED banner across their image everywhere they appear.</li>
+      <li>Cancelled events show a big diagonal CANCELLED banner across their image everywhere they appear.</li>
     </ul>
 
     <h3>Material changes (date / location / status)</h3>
     <ul>
-      <li>When you edit any of those three on an existing hike and click Save, attendees are automatically emailed + push-notified about the change. (Title and description edits don't notify.)</li>
+      <li>When you edit any of those three on an existing event and click Save, attendees are automatically emailed + push-notified about the change. (Title and description edits don't notify.)</li>
       <li>To skip the auto-notify on a particular save, tick <em>Suppress change notifications</em> at the bottom of the Details tab.</li>
     </ul>
 
@@ -307,8 +424,8 @@
     <ul>
       <li><strong>Everyone who RSVPs always gets the email</strong> — that's automatic and not opt-out-able from the app.</li>
       <li><strong>Push notifications (desktop / mobile) are opt-in.</strong> After saving an RSVP the user sees a "Get instant change alerts?" popup. Only those who click Yes (and Allow in their browser's own prompt) will receive pushes. This applies to cancellations, Notify, Broadcasts, and material edits.</li>
-      <li><strong>Notify and Broadcast messages also appear as bubbles on the event page itself</strong> — even members who missed the email or push see the latest updates when they revisit the hike. Notify bubbles have a green border; Broadcast bubbles have a persimmon border and show the subject. Newest first.</li>
-      <li>The bubbles are only displayed on <strong>today's hike and upcoming hikes</strong>. They're hidden once the hike has passed.</li>
+      <li><strong>Notify and Broadcast messages also appear as bubbles on the event page itself</strong> — even members who missed the email or push see the latest updates when they revisit the event. Notify bubbles have a green border; Broadcast bubbles have a persimmon border and show the subject. Newest first.</li>
+      <li>The bubbles are only displayed on <strong>today's event and upcoming events</strong>. They're hidden once the event has passed.</li>
     </ul>
 
     <h3>Tabs inside the editor</h3>
@@ -320,17 +437,17 @@
 
     <h3>Public visibility rules (what members see)</h3>
     <ul>
-      <li>The home page shows hikes from the <strong>last 90 days through any future date</strong>.</li>
-      <li>Cancelled and past hikes can't be RSVP'd to. Past hikes show a "This hike has already happened" banner; the description collapses with a See more toggle.</li>
+      <li>The home page shows events from the <strong>last 90 days through any future date</strong>.</li>
+      <li>Cancelled and past events can't be RSVP'd to. Past events show a "This event has already happened" banner; the description collapses with a See more toggle.</li>
       <li>The "Open your private photo gallery" link only appears on the day-of and for 30 days after.</li>
     </ul>
 
     <h3>Member photo gallery</h3>
     <ul>
-      <li>A <strong>shared per-hike album</strong> so attendees can post and view photos. Private to the people who RSVP'd for that specific hike.</li>
+      <li>A <strong>shared per-event album</strong> so attendees can post and view photos. Private to the people who RSVP'd for that specific event.</li>
       <li>Anyone with gallery access can download individual photos or every photo as a zip.</li>
       <li>Members get a gallery link in their RSVP confirmation email; they can request a resend if lost.</li>
-      <li>Member-uploaded photos auto-delete <strong>30 days after the hike date</strong>.</li>
+      <li>Member-uploaded photos auto-delete <strong>30 days after the event date</strong>.</li>
       <li>You can moderate (delete) any member photo from the gallery view.</li>
     </ul>
   </form>
@@ -339,7 +456,8 @@
 <script src="/scenes.js"></script>
 
 <script type="module">
-  import { api, formatDate, showNotice, clearNotice } from "/js/common.js";
+  import { api, formatDate, showNotice, clearNotice, resizeImage, loadSite, applySite } from "/js/common.js";
+  loadSite();
 
   let token = sessionStorage.getItem("admin_token") || "";
   let currentEventId = null;
@@ -350,6 +468,8 @@
   const dash = document.getElementById("dash");
   const editor = document.getElementById("editor");
   const eventsList = document.getElementById("events-list");
+  const settings = document.getElementById("settings");
+  const settingsLink = document.getElementById("settings-btn");
   const logoutLink = document.getElementById("logout");
 
   function escapeHtml(s) {
@@ -366,7 +486,9 @@
     loginCard.style.display = section === "login" ? "block" : "none";
     dash.style.display = section === "dash" ? "block" : "none";
     editor.style.display = section === "editor" ? "block" : "none";
+    settings.style.display = section === "settings" ? "block" : "none";
     logoutLink.style.display = section === "login" ? "none" : "inline";
+    settingsLink.style.display = section === "login" ? "none" : "inline";
   }
 
   // Deterministic scene per event (used for dashboard thumbs when no real image).
@@ -382,6 +504,7 @@
     if (!token) { show("login"); return; }
     try {
       await refreshEvents();
+      await loadCategories();
       show("dash");
     } catch (err) {
       if (err.status === 401) { sessionStorage.removeItem("admin_token"); token = ""; show("login"); }
@@ -414,7 +537,7 @@
     const { events } = await api("/api/admin/events", authed());
     eventsList.innerHTML = "";
     if (events.length === 0) {
-      eventsList.innerHTML = `<p class="empty-filler">No hikes yet. Click "+ New hike" to add one.</p>`;
+      eventsList.innerHTML = `<p class="empty-filler">No events yet. Click "+ New event" to add one.</p>`;
       return;
     }
     for (const ev of events) {
@@ -441,7 +564,7 @@
       card.innerHTML = `
         ${thumbHtml}
         <div class="a-info">
-          <h3>${escapeHtml(ev.title)}${cancelChip}</h3>
+          <h3>${escapeHtml(ev.title)}${cancelChip}${siteCategories.length > 1 && siteCategories.find((x) => x.id === ev.category) ? `<span class="chip neutral" style="padding:2px 9px;margin-left:6px">${escapeHtml(siteCategories.find((x) => x.id === ev.category).name)}</span>` : ""}</h3>
           <div class="meta">${escapeHtml(formatDate(ev.event_date))}${ev.location ? " · " + escapeHtml(ev.location) : ""} · <b style="color:var(--pine)">${ev.rsvp_count} going</b></div>
         </div>
         <div class="a-act">
@@ -491,7 +614,7 @@
         body: JSON.stringify({ status: "cancelled", cancel_reason: reason }),
       });
       if (r.notified) {
-        alert(`Hike cancelled. Notified ${r.notified.recipients} (${r.notified.emails_sent} email, ${r.notified.push_sent} push).`);
+        alert(`Event cancelled. Notified ${r.notified.recipients} (${r.notified.emails_sent} email, ${r.notified.push_sent} push).`);
       }
       await refreshEvents();
     } catch (err) {
@@ -509,6 +632,11 @@
   }
 
   document.getElementById("new-event-btn").addEventListener("click", () => openEditor(null));
+  document.getElementById("ev-category").addEventListener("change", (e) => {
+    if (document.getElementById("event-id").value) return; // only auto-toggle before first save
+    const c = siteCategories.find((x) => x.id === e.target.value);
+    if (c) document.getElementById("ev-gallery").checked = c.gallery !== false;
+  });
 
   // Help modal
   const helpDialog = document.getElementById("help-dialog");
@@ -517,9 +645,9 @@
   document.getElementById("close-editor").addEventListener("click", () => { show("dash"); refreshEvents(); });
 
   // Tab switching
-  document.querySelectorAll(".tabbar .t").forEach((tab) => {
+  document.querySelectorAll("#editor .tabbar .t").forEach((tab) => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".tabbar .t").forEach((t) => t.classList.remove("on"));
+      document.querySelectorAll("#editor .tabbar .t").forEach((t) => t.classList.remove("on"));
       document.querySelectorAll(".pane").forEach((p) => p.classList.remove("on"));
       tab.classList.add("on");
       document.querySelector(`.pane[data-pane="${tab.dataset.tab}"]`).classList.add("on");
@@ -612,11 +740,14 @@
     document.getElementById("ev-description").value = "";
     document.getElementById("ev-status").value = "active";
     document.getElementById("ev-suppress").checked = false;
+    const catSel = document.getElementById("ev-category");
+    catSel.value = siteCategories[0]?.id || "";
+    document.getElementById("ev-gallery").checked = siteCategories[0]?.gallery !== false;
     const isNew = !eventId;
     document.getElementById("ev-status-row").style.display = isNew ? "none" : "";
     document.getElementById("ev-suppress-row").style.display = isNew ? "none" : "";
     clearNotice(document.getElementById("event-msg"));
-    document.getElementById("editor-title").textContent = isNew ? "New hike" : "Edit hike";
+    document.getElementById("editor-title").textContent = isNew ? "New event" : "Edit event";
 
     if (eventId) {
       const { event } = await api(`/api/events/${eventId}`);
@@ -630,13 +761,15 @@
       document.getElementById("ev-location").value = event.location || "";
       document.getElementById("ev-description").value = event.description;
       document.getElementById("ev-status").value = event.status;
+      catSel.value = event.category || "";
+      document.getElementById("ev-gallery").checked = !!event.gallery_enabled;
     }
     document.getElementById("image-file").value = "";
     document.getElementById("image-file").disabled = isNew;
     document.getElementById("upload-label").style.opacity = isNew ? "0.5" : "";
     document.getElementById("upload-label").style.pointerEvents = isNew ? "none" : "";
     document.getElementById("upload-hint").textContent = isNew
-      ? "Save the hike first to attach photos"
+      ? "Save the event first to attach photos"
       : "uploads instantly when picked";
     await loadImagesGrid();
     // Reset to Details tab
@@ -677,6 +810,8 @@
       location: document.getElementById("ev-location").value.trim() || null,
       description: document.getElementById("ev-description").value.trim(),
       status: document.getElementById("ev-status").value,
+      category: document.getElementById("ev-category").value,
+      gallery_enabled: document.getElementById("ev-gallery").checked,
       suppress_notify: document.getElementById("ev-suppress").checked,
     };
 
@@ -688,7 +823,7 @@
         res = await api("/api/admin/events", { ...authed({ method: "POST" }), body: JSON.stringify(payload) });
         currentEventId = res.id;
         document.getElementById("event-id").value = res.id;
-        // First save of a new hike: reveal status/suppress controls and unlock the
+        // First save of a new event: reveal status/suppress controls and unlock the
         // photo uploader (it stays disabled until the event row exists).
         document.getElementById("ev-status-row").style.display = "";
         document.getElementById("ev-suppress-row").style.display = "";
@@ -700,7 +835,7 @@
     } catch (err) {
       if (err.status === 409 && err.body?.error === "time_conflict") {
         showNotice(msgEl, "error",
-          `Time conflict — another active hike (“${err.body.conflicts_with}”) is already at this time. Pick a different time or cancel the other hike first.`);
+          `Time conflict — another active event (“${err.body.conflicts_with}”) is already at this time. Pick a different time or cancel the other event first.`);
         return;
       }
       showNotice(msgEl, "error", err.message);
@@ -751,7 +886,7 @@
     const el = document.getElementById("existing-images");
     el.innerHTML = "";
     if (!currentEventId) {
-      el.innerHTML = `<div class="meta" style="font-size:13px">Save the hike first to attach photos.</div>`;
+      el.innerHTML = `<div class="meta" style="font-size:13px">Save the event first to attach photos.</div>`;
       return;
     }
     const { images } = await api(`/api/events/${currentEventId}`);
@@ -913,6 +1048,195 @@
   });
 
   init();
+
+  // ===================== SETTINGS =====================
+  let siteCategories = [];   // [{id,name,gallery}] — also used by the event editor
+
+  const PRESETS = [
+    { name: "Forest",  primary: "#2C6A49", accent: "#C25E3A", bg: "#F4F1E8" },
+    { name: "Ocean",   primary: "#1F5F8B", accent: "#D9822B", bg: "#EEF3F6" },
+    { name: "Plum",    primary: "#6B3A6E", accent: "#C7A23E", bg: "#F5F0F4" },
+    { name: "Slate",   primary: "#3B4A5A", accent: "#C25E3A", bg: "#F2F3F4" },
+    { name: "Terracotta", primary: "#A24E2F", accent: "#2C6A49", bg: "#F7EFE7" },
+    { name: "Night",   primary: "#5FA77C", accent: "#D9794F", bg: "#141A16" },
+  ];
+
+  async function loadCategories() {
+    const site = await api("/api/site");
+    siteCategories = site.categories;
+    fillCategorySelect();
+    return site;
+  }
+  function fillCategorySelect() {
+    const sel = document.getElementById("ev-category");
+    sel.innerHTML = siteCategories.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+    document.getElementById("ev-category-row").style.display = siteCategories.length > 1 ? "" : "none";
+  }
+
+  settingsLink.addEventListener("click", async (e) => { e.preventDefault(); await openSettings(); });
+  document.getElementById("settings-back").addEventListener("click", () => { show("dash"); refreshEvents(); });
+  document.querySelectorAll("#settings-tabs .t").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll("#settings-tabs .t").forEach((t) => t.classList.toggle("on", t === tab));
+      document.querySelectorAll(".spane").forEach((p) => p.classList.toggle("on", p.dataset.spane === tab.dataset.stab));
+    });
+  });
+
+  const $ = (id) => document.getElementById(id);
+  const SETTINGS_ERRORS = {
+    missing_site_name: "Site name can't be empty.", missing_name: "Your name can't be empty.",
+    bad_reply_to: "That reply-to address doesn't look valid.", bad_from_email: "That sending address doesn't look valid.",
+    bad_timezone: "Timezone not recognised — use a name like Europe/Dublin or Asia/Seoul.",
+    bad_color: "One of the colours isn't valid.", bad_categories: "You need between 1 and 8 categories.",
+    bad_category_id: "Category names must be unique.", bad_category_name: "Every category needs a name (max 30 characters).",
+    password_too_short: "Password needs at least 8 characters.", bad_resend_key: "Resend keys start with re_.",
+    file_too_large: "That image is too big (max 3 MB after resizing).", unsupported_type: "Use a JPG, PNG or WebP image.",
+  };
+  const errText = (err) => SETTINGS_ERRORS[err.body?.error] || err.message;
+
+  async function openSettings() {
+    const s = await api("/api/admin/settings", authed());
+    $("s-site-name").value = s.SITE_NAME; $("s-tagline").value = s.SITE_TAGLINE; $("s-seal").value = s.SITE_SEAL;
+    $("s-admin-name").value = s.ADMIN_NAME; $("s-timezone").value = s.TIMEZONE;
+    $("s-from-email").value = s.FROM_EMAIL; $("s-reply-to").value = s.REPLY_TO_EMAIL; $("s-resend-key").value = ""; $("s-password").value = "";
+    $("s-resend-state").textContent = s.resend_key_set ? "· a key is set" : "· no key set — emails won't send";
+    siteCategories = s.site.categories; fillCategorySelect(); renderCatList();
+    $("s-color-primary").value = s.site.colors.primary || PRESETS[0].primary;
+    $("s-color-accent").value = s.site.colors.accent || PRESETS[0].accent;
+    $("s-color-bg").value = s.site.colors.bg || PRESETS[0].bg;
+    $("presets").innerHTML = PRESETS.map((p, i) => `<button type="button" class="btn ghost sm" data-preset="${i}" style="border-left:14px solid ${p.primary}">${p.name}</button>`).join("");
+    setAssetPreview("icon", s.site.icon); setAssetPreview("background", s.site.background);
+    document.querySelectorAll(".notice", settings).forEach((n) => { n.style.display = "none"; });
+    show("settings");
+  }
+
+  async function saveSettings(patch, msgEl, okText) {
+    try {
+      const r = await api("/api/admin/settings", { ...authed({ method: "PUT" }), body: JSON.stringify(patch) });
+      showNotice(msgEl, "info", okText);
+      sessionStorage.removeItem("site");
+      applySite(r.site);
+      return r;
+    } catch (err) { showNotice(msgEl, "error", errText(err)); return null; }
+  }
+
+  $("s-save-general").addEventListener("click", () => saveSettings({
+    SITE_NAME: $("s-site-name").value, SITE_TAGLINE: $("s-tagline").value, SITE_SEAL: $("s-seal").value,
+    ADMIN_NAME: $("s-admin-name").value, TIMEZONE: $("s-timezone").value,
+  }, $("s-general-msg"), "Saved."));
+
+  $("s-save-account").addEventListener("click", async () => {
+    const patch = { FROM_EMAIL: $("s-from-email").value, REPLY_TO_EMAIL: $("s-reply-to").value };
+    if ($("s-resend-key").value.trim()) patch.resend_api_key = $("s-resend-key").value.trim();
+    if ($("s-password").value) patch.password = $("s-password").value;
+    const r = await saveSettings(patch, $("s-account-msg"), patch.password ? "Saved. Use the new password next time you log in." : "Saved.");
+    if (r) { $("s-resend-key").value = ""; $("s-password").value = ""; if (patch.resend_api_key) $("s-resend-state").textContent = "· a key is set"; }
+  });
+
+  // --- categories ---
+  function renderCatList() {
+    const list = $("cat-list");
+    list.innerHTML = siteCategories.map((c, i) => `
+      <div class="card" style="padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap" data-cat-row="${i}">
+        <input class="input" style="flex:1;min-width:160px" value="${escapeHtml(c.name)}" placeholder="Name" data-cat-name maxlength="30">
+        <label class="meta" style="display:flex;gap:6px;align-items:center;cursor:pointer;font-size:13.5px"><input type="checkbox" data-cat-gallery ${c.gallery ? "checked" : ""}> Photos</label>
+        <div class="asset-ctl" style="display:flex;gap:8px;align-items:center">
+          <img class="asset-prev" alt="" src="${c.image || ""}" style="width:64px;height:40px;border-radius:8px;object-fit:cover;${c.image ? "" : "display:none"}">
+          <input type="file" accept="image/*" style="display:none" data-cat-file>
+          <button type="button" class="btn ghost sm" data-cat-img ${c.id ? "" : "disabled title=\"Save first\""}>Image</button>
+        </div>
+        <button type="button" class="btn danger sm" data-cat-del ${siteCategories.length <= 1 ? "disabled" : ""}>Remove</button>
+      </div>`).join("");
+    list.querySelectorAll("[data-cat-row]").forEach((row) => {
+      const i = Number(row.dataset.catRow);
+      row.querySelector("[data-cat-name]").addEventListener("input", (e) => { siteCategories[i].name = e.target.value; });
+      row.querySelector("[data-cat-gallery]").addEventListener("change", (e) => { siteCategories[i].gallery = e.target.checked; });
+      row.querySelector("[data-cat-del]").addEventListener("click", () => { siteCategories.splice(i, 1); renderCatList(); });
+      const file = row.querySelector("[data-cat-file]");
+      row.querySelector("[data-cat-img]").addEventListener("click", () => file.click());
+      file.addEventListener("change", async () => {
+        if (!file.files[0]) return;
+        try {
+          const r = await uploadAsset(`cat-${siteCategories[i].id}`, file.files[0], 1200);
+          siteCategories[i].image = r.url; renderCatList();
+        } catch (err) { showNotice($("s-cats-msg"), "error", errText(err)); }
+      });
+    });
+  }
+  const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+  $("cat-add").addEventListener("click", () => { siteCategories.push({ id: "", name: "", gallery: true, image: null }); renderCatList(); });
+  $("s-save-cats").addEventListener("click", async () => {
+    const cats = siteCategories.map((c) => ({ id: c.id || slug(c.name) || "cat", name: c.name.trim(), gallery: c.gallery !== false }));
+    const r = await saveSettings({ categories: cats }, $("s-cats-msg"), "Categories saved.");
+    if (r) { siteCategories = r.site.categories; fillCategorySelect(); renderCatList(); }
+  });
+
+  // --- colours ---
+  $("presets").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-preset]"); if (!b) return;
+    const p = PRESETS[Number(b.dataset.preset)];
+    $("s-color-primary").value = p.primary; $("s-color-accent").value = p.accent; $("s-color-bg").value = p.bg;
+  });
+  async function saveColors(patch) {
+    const r = await saveSettings(patch, $("s-colors-msg"), "Colours saved.");
+    if (r) document.getElementById("site-css").href = "/site.css?" + Date.now();
+  }
+  $("s-save-colors").addEventListener("click", () => saveColors({
+    COLOR_PRIMARY: $("s-color-primary").value, COLOR_ACCENT: $("s-color-accent").value, COLOR_BG: $("s-color-bg").value,
+  }));
+  $("s-reset-colors").addEventListener("click", async () => {
+    $("s-color-primary").value = PRESETS[0].primary; $("s-color-accent").value = PRESETS[0].accent; $("s-color-bg").value = PRESETS[0].bg;
+    await saveColors({ COLOR_PRIMARY: "", COLOR_ACCENT: "", COLOR_BG: "" });
+  });
+
+  // --- assets ---
+  async function uploadAsset(name, file, maxEdge, forcePng = false) {
+    let blob = await resizeImage(file, { maxEdge, quality: 0.88 });
+    if (forcePng && blob.type !== "image/png") blob = await toPngSquare(file, maxEdge);
+    const fd = new FormData(); fd.append("file", blob, name + (blob.type === "image/png" ? ".png" : ".jpg"));
+    return api(`/api/admin/assets/${name}`, { ...authed({ method: "POST" }), body: fd });
+  }
+  // Icons must be square PNGs for Android/iOS home screens: centre-crop + PNG.
+  async function toPngSquare(file, size) {
+    const bmp = await createImageBitmap(file);
+    const side = Math.min(bmp.width, bmp.height);
+    const canvas = new OffscreenCanvas(size, size);
+    canvas.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+    return canvas.convertToBlob({ type: "image/png" });
+  }
+  function setAssetPreview(kind, url) {
+    const row = document.querySelector(`.asset-row[data-asset="${kind}"]`);
+    const img = row.querySelector(".asset-prev");
+    img.src = url || ""; img.style.display = url ? "" : "none";
+    row.querySelector("[data-remove]").style.display = url ? "" : "none";
+  }
+  document.querySelectorAll(".asset-row").forEach((row) => {
+    const kind = row.dataset.asset;
+    const file = row.querySelector("input[type=file]");
+    row.querySelector("[data-pick]").addEventListener("click", () => file.click());
+    row.querySelector("[data-remove]").addEventListener("click", async () => {
+      const names = kind === "icon" ? ["icon-192", "icon-512"] : ["background"];
+      for (const n of names) await api(`/api/admin/assets/${n}`, authed({ method: "DELETE" }));
+      setAssetPreview(kind, null); sessionStorage.removeItem("site");
+      showNotice($("s-assets-msg"), "info", "Removed.");
+    });
+    file.addEventListener("change", async () => {
+      const f = file.files[0]; if (!f) return;
+      try {
+        let r;
+        if (kind === "icon") {
+          r = await uploadAsset("icon-512", f, 512, true);
+          r = await uploadAsset("icon-192", f, 192, true);
+        } else {
+          r = await uploadAsset("background", f, 1920);
+          document.getElementById("site-css").href = "/site.css?" + Date.now();
+        }
+        setAssetPreview(kind, r.url); sessionStorage.removeItem("site");
+        showNotice($("s-assets-msg"), "info", "Uploaded.");
+      } catch (err) { showNotice($("s-assets-msg"), "error", errText(err)); }
+      file.value = "";
+    });
+  });
 </script>
 
 </body>

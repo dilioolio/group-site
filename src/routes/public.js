@@ -15,6 +15,7 @@ publicRoutes.get("/api/events", async (c) => {
   const cutoff = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
   const rows = (await c.env.DB.prepare(
     `SELECT e.id, e.title, e.description, e.event_date, e.location, e.status,
+            e.category, e.gallery_enabled,
             (SELECT r2_key FROM event_images
               WHERE event_id = e.id AND is_primary = 1
               ORDER BY sort_order LIMIT 1) AS primary_image_key,
@@ -31,7 +32,7 @@ publicRoutes.get("/api/events", async (c) => {
 publicRoutes.get("/api/events/:id", async (c) => {
   const id = c.req.param("id");
   const event = await c.env.DB.prepare(
-    "SELECT id, title, description, event_date, location, status, created_at, updated_at FROM events WHERE id = ?"
+    "SELECT id, title, description, event_date, location, status, category, gallery_enabled, created_at, updated_at FROM events WHERE id = ?"
   ).bind(id).first();
   if (!event) return c.notFound();
 

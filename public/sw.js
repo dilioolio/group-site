@@ -2,7 +2,7 @@
 // Lives at /sw.js so its scope is the whole origin.
 
 const CACHE = "hiking-v1";
-const SHELL = ["/", "/app.css", "/manifest.json"];
+const SHELL = ["/", "/app.css"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));

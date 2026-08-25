@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hike — Daniel's Hikes</title>
+  <title>Event — Group Site</title>
   <meta name="theme-color" content="#2C6A49">
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/site.css">
   <style>
     /* Page-scoped tweaks layered on top of the shared design system. */
     .back-link { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 18px; font-weight: 600; white-space: nowrap; }
@@ -78,7 +79,7 @@
     #hero-wrap .d-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #hero-wrap .d-hero .scene { position: absolute; inset: 0; }
 
-    /* "Solo" layout — past or cancelled hikes drop the sidebar grid and centre
+    /* "Solo" layout — past or cancelled events drop the sidebar grid and centre
        the reading column. The aside (gallery link card if it still applies)
        falls naturally below the main content in the single column. */
     .detail.solo { grid-template-columns: 1fr; }
@@ -91,9 +92,9 @@
 
 <header class="topbar">
   <div class="wrap bar">
-    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <a class="brand" href="/"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></a>
     <nav class="navset">
-      <a class="hide-sm" href="/">All hikes</a>
+      <a class="hide-sm" href="/">All events</a>
       <a class="cta" href="/admin">Admin</a>
     </nav>
   </div>
@@ -101,7 +102,7 @@
 
 <main class="section">
   <div class="wrap">
-    <a class="meta back-link" href="/">← All hikes</a>
+    <a class="meta back-link" href="/">← All events</a>
 
     <div id="loading" class="muted">Loading…</div>
 
@@ -117,13 +118,13 @@
         </div>
 
         <div class="title-block">
-          <div id="eyebrow" class="eyebrow persimmon"><span class="dot"></span> <span id="eyebrow-text">Hike</span></div>
+          <div id="eyebrow" class="eyebrow persimmon"><span class="dot"></span> <span id="eyebrow-text">Event</span></div>
           <h1 id="title" class="display"></h1>
           <div id="meta" class="meta meta-row"></div>
         </div>
 
-        <p id="cancelled-notice" class="notice error" style="display:none;margin-top:18px">This hike has been cancelled.</p>
-        <p id="past-notice" class="notice info" style="display:none;margin-top:18px">This hike has already happened.</p>
+        <p id="cancelled-notice" class="notice error" style="display:none;margin-top:18px">This event has been cancelled.</p>
+        <p id="past-notice" class="notice info" style="display:none;margin-top:18px">This event has already happened.</p>
 
         <div id="event-messages" class="event-messages" style="display:none"></div>
 
@@ -141,7 +142,7 @@
       <!-- SIDE -->
       <aside class="sticky">
         <div id="rsvp-card" class="card rsvp-card">
-          <h3 class="display">Join this hike</h3>
+          <h3 class="display">Join this event</h3>
           <p class="rsvp-sub">Your RSVP unlocks the private photo gallery — we'll email you the link.</p>
           <form id="rsvp-form">
             <label class="field-l" for="name">Your name</label>
@@ -183,8 +184,8 @@
 
 <footer class="foot">
   <div class="wrap">
-    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
-    <span class="muted">Photos auto-expire 30 days after each hike</span>
+    <div class="brand"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></div>
+    <span class="muted">Photos auto-expire 30 days after each event</span>
   </div>
 </footer>
 
@@ -192,7 +193,7 @@
 <dialog id="push-dialog" class="push-dialog">
   <form method="dialog" class="push-dialog-form">
     <h3 class="display" style="margin:0 0 4px">Get instant change alerts?</h3>
-    <p class="meta">If this hike's time, location, or status changes, we'll send a notification to your desktop or phone — no email check needed.</p>
+    <p class="meta">If this event's time, location, or status changes, we'll send a notification to your desktop or phone — no email check needed.</p>
     <p class="meta tiny">After you click <strong>Yes</strong>, your browser will pop up its own permission prompt — you need to click <strong>Allow</strong> there to actually turn notifications on.</p>
     <p id="ios-push-hint" class="meta tiny" style="display:none">On iPhone/iPad you need to add this site to your Home Screen first — Safari only delivers push to installed PWAs.</p>
     <p id="inapp-push-hint" class="meta tiny" style="display:none">Looks like you opened this from a chat app (KakaoTalk, Instagram, Messenger, etc.). Notifications don't work in those in-app browsers — tap the ⋯ menu and choose "Open in Chrome/Safari", then come back here and try again.</p>
@@ -227,7 +228,8 @@
 <script src="/scenes.js"></script>
 
 <script type="module">
-  import { api, formatDate, subscribeForPush, showNotice } from "/js/common.js";
+  import { api, formatDate, subscribeForPush, showNotice, loadSite } from "/js/common.js";
+  loadSite();
 
   const eventId = location.pathname.split("/")[2];
 
@@ -292,7 +294,7 @@
   }
 
   // Pick a generative scene palette deterministically from the event id, so the
-  // same hike always shows the same placeholder art across visits.
+  // same event always shows the same placeholder art across visits.
   const SCENES = ["dawn", "day", "dusk", "forest", "night"];
   function sceneFor(idStr, salt = 0) {
     let h = 0;
@@ -365,7 +367,7 @@
     article.style.display = "grid";
 
     titleEl.textContent = event.title;
-    document.title = `${event.title} — Daniel's Hikes`;
+    document.title = `${event.title} — ${document.title.split(" — ").pop()}`;
 
     const primary = images.find((i) => i.is_primary) || images[0];
     renderHero(primary, event.location);
@@ -412,14 +414,17 @@
       });
       descEl.after(toggle);
     }
-    // Block RSVPs for cancelled or past hikes — hide the form entirely.
+    // Block RSVPs for cancelled or past events — hide the form entirely.
     if (isCancelled || isPast) rsvpCard.style.display = "none";
-    // Show the gallery link only on today's hike and on past hikes within 30 days.
-    if (!isCancelled && !isUpcoming && daysSinceEvent <= 30) {
+    // Show the gallery link only on today's event and on past events within 30 days.
+    if (event.gallery_enabled && !isCancelled && !isUpcoming && daysSinceEvent <= 30) {
       galleryLinkRow.style.display = "flex";
     }
+    if (!event.gallery_enabled) {
+      document.querySelector(".rsvp-sub").textContent = "We'll email you a confirmation and let you know if anything changes.";
+    }
 
-    // Past/cancelled hikes: collapse to a single centred reading column. The
+    // Past/cancelled events: collapse to a single centred reading column. The
     // RSVP card is gone, push alerts are pointless (no changes coming), so the
     // sticky sidebar shouldn't take up the right third. The gallery link card,
     // if it still applies, falls naturally below the main content.
@@ -432,7 +437,7 @@
       }
     }
 
-    // Notify + Broadcast messages: shown on today/upcoming hikes only, newest first.
+    // Notify + Broadcast messages: shown on today/upcoming events only, newest first.
     const isPreviousDay = new Date(event.event_date) < startOfToday;
     if (!isPreviousDay && Array.isArray(data.messages) && data.messages.length > 0) {
       const wrap = document.getElementById("event-messages");
@@ -455,7 +460,7 @@
     const rest = primary ? images.filter((i) => i.id !== primary.id) : [];
     renderThumbs(rest);
   } catch (err) {
-    loading.textContent = "Couldn't load this hike: " + err.message;
+    loading.textContent = "Couldn't load this event: " + err.message;
   }
 
   // Push opt-in dialog hints: in-app browser (KakaoTalk etc.) takes priority because
@@ -485,7 +490,7 @@
     }
     try {
       await subscribeForPush(pushToken);
-      showNotice(rsvpMsg, "info", "You'll get a push notification if this hike changes.");
+      showNotice(rsvpMsg, "info", "You'll get a push notification if this event changes.");
     } catch (err) {
       showNotice(rsvpMsg, "warn", err.message);
     }
@@ -514,7 +519,7 @@
       if (r.status === "cancelled") {
         showNotice(rsvpMsg, "info", "RSVP cancelled.");
       } else {
-        showNotice(rsvpMsg, "info", "RSVP saved — check your email for your gallery link.");
+        showNotice(rsvpMsg, "info", event.gallery_enabled ? "RSVP saved — check your email for your gallery link." : "RSVP saved — check your email for confirmation.");
         pushDialog.showModal();
       }
     } catch (err) {

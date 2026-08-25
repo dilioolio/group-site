@@ -8,6 +8,7 @@ import {
   isoNow, uuid, jsonError, escapeHtml, normalizeEmail, isValidEmail, formatEventDate,
 } from "../lib/utils.js";
 import { rateLimit, clientIp } from "../lib/ratelimit.js";
+import { parseCategories } from "../lib/site.js";
 
 export const adminRoutes = new Hono();
 
@@ -37,7 +38,7 @@ adminRoutes.post("/api/admin/login", async (c) => {
 // The public /api/events filters to upcoming + active; admins need to see everything.
 adminRoutes.get("/api/admin/events", requireAdmin(), async (c) => {
   const rows = (await c.env.DB.prepare(
-    `SELECT e.id, e.title, e.event_date, e.location, e.status,
+    `SELECT e.id, e.title, e.event_date, e.location, e.status, e.category, e.gallery_enabled,
             (SELECT r2_key FROM event_images
               WHERE event_id = e.id AND is_primary = 1
               ORDER BY sort_order LIMIT 1) AS primary_image_key,
@@ -57,6 +58,11 @@ adminRoutes.post("/api/admin/events", requireAdmin(), async (c) => {
   const eventDate = String(body?.event_date || "").trim();
   const location = body?.location ? String(body.location).trim() : null;
   const status = ALLOWED_STATUS.has(body?.status) ? body.status : "active";
+  const cats = parseCategories(c.env.CATEGORIES);
+  const cat = cats.find((x) => x.id === body?.category) || (cats.length === 1 ? cats[0] : null);
+  const category = cat ? cat.id : "";
+  // Gallery: explicit value wins, otherwise the category's default.
+  const galleryEnabled = body?.gallery_enabled !== undefined ? (body.gallery_enabled ? 1 : 0) : (cat?.gallery === false ? 0 : 1);
 
   if (!title) return jsonError(c, 400, "missing_title");
   if (!description) return jsonError(c, 400, "missing_description");
@@ -71,9 +77,9 @@ adminRoutes.post("/api/admin/events", requireAdmin(), async (c) => {
   const id = uuid();
   const now = isoNow();
   await c.env.DB.prepare(
-    `INSERT INTO events (id, title, description, event_date, location, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, title, description, eventDate, location, status, now, now).run();
+    `INSERT INTO events (id, title, description, event_date, location, status, category, gallery_enabled, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, title, description, eventDate, location, status, category, galleryEnabled, now, now).run();
 
   return c.json({ ok: true, id });
 });
@@ -96,6 +102,10 @@ adminRoutes.put("/api/admin/events/:id", requireAdmin(), async (c) => {
     status:      body.status      !== undefined
                    ? (ALLOWED_STATUS.has(body.status) ? body.status : existing.status)
                    : existing.status,
+    category:    body.category    !== undefined
+                   ? (parseCategories(c.env.CATEGORIES).some((x) => x.id === body.category) ? body.category : "")
+                   : existing.category,
+    gallery_enabled: body.gallery_enabled !== undefined ? (body.gallery_enabled ? 1 : 0) : existing.gallery_enabled,
   };
 
   if (!next.title) return jsonError(c, 400, "missing_title");
@@ -111,8 +121,8 @@ adminRoutes.put("/api/admin/events/:id", requireAdmin(), async (c) => {
   }
 
   await c.env.DB.prepare(
-    `UPDATE events SET title=?, description=?, event_date=?, location=?, status=?, updated_at=? WHERE id=?`
-  ).bind(next.title, next.description, next.event_date, next.location, next.status, isoNow(), id).run();
+    `UPDATE events SET title=?, description=?, event_date=?, location=?, status=?, category=?, gallery_enabled=?, updated_at=? WHERE id=?`
+  ).bind(next.title, next.description, next.event_date, next.location, next.status, next.category, next.gallery_enabled, isoNow(), id).run();
 
   // Material-change detection: if event_date/location/status moved, notify attendees.
   const changed = MATERIAL_FIELDS.filter((k) => String(existing[k] ?? "") !== String(next[k] ?? ""));
@@ -273,11 +283,11 @@ adminRoutes.post("/api/admin/events/:id/invite", requireAdmin(), async (c) => {
   const eventUrl = `${c.env.SITE_URL}/event/${eventId}`;
   const niceDate = formatEventDate(c.env, event.event_date);
   const subject = `You're invited: ${event.title}`;
-  const inviteBody = `You're invited to a hike:\n\n${event.title}\n${niceDate}${event.location ? `\n${event.location}` : ""}`;
+  const inviteBody = `You're invited:\n\n${event.title}\n${niceDate}${event.location ? `\n${event.location}` : ""}`;
   const { body: textBody, htmlBody } = composeEmail(c.env, {
     body: inviteBody,
     link: eventUrl,
-    linkLabel: "Open the hike to RSVP",
+    linkLabel: "Open the event to RSVP",
   });
 
   const result = await sendEmail(c.env, { to: valid, subject, body: textBody, htmlBody });

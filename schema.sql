@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS events (
   event_date    TEXT NOT NULL,
   location      TEXT,
   status        TEXT NOT NULL DEFAULT 'active',
+  -- id of a category from the CATEGORIES config setting ('' = uncategorised)
+  category      TEXT NOT NULL DEFAULT '',
+  -- per-event member photo gallery on/off (category supplies the default)
+  gallery_enabled INTEGER NOT NULL DEFAULT 1,
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );

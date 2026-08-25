@@ -183,7 +183,7 @@ function page(title, inner) {
   <main class="card">
     <h1>${title}</h1>
     ${inner}
-    <p class="back"><a href="/">Back to hikes</a></p>
+    <p class="back"><a href="/">Back to events</a></p>
   </main>
 </body>
 </html>`;

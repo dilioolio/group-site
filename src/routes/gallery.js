@@ -46,11 +46,11 @@ galleryRoutes.post("/api/events/:id/gallery/request-access", async (c) => {
   if (!emailLimit.allowed) return jsonError(c, 429, "rate_limited");
 
   const event = await c.env.DB.prepare(
-    "SELECT id, title FROM events WHERE id = ?"
+    "SELECT id, title, gallery_enabled FROM events WHERE id = ?"
   ).bind(eventId).first();
-  if (!event) {
+  if (!event || !event.gallery_enabled) {
     // Still respond generically — don't reveal whether the event exists either.
-    return c.json({ ok: true, message: "If you're signed up for this hike, check your email." });
+    return c.json({ ok: true, message: "If you're signed up for this event, check your email." });
   }
 
   const member = await c.env.DB.prepare(
@@ -65,8 +65,8 @@ galleryRoutes.post("/api/events/:id/gallery/request-access", async (c) => {
     const { body, htmlBody } = composeEmail(c.env, {
       recipientName,
       body:
-        `Here's your link to this hike's photo gallery. It's valid for ${ttl} days. ` +
-        `Photos auto-delete 30 days after the hike.`,
+        `Here's your link to this event's photo gallery. It's valid for ${ttl} days. ` +
+        `Photos auto-delete 30 days after the event.`,
       link,
       linkLabel: "Open the gallery",
     });
@@ -78,7 +78,7 @@ galleryRoutes.post("/api/events/:id/gallery/request-access", async (c) => {
     }));
   }
 
-  return c.json({ ok: true, message: "If you're signed up for this hike, check your email." });
+  return c.json({ ok: true, message: "If you're signed up for this event, check your email." });
 });
 
 // POST /api/events/:id/photos — multipart upload (token-gated, image-only, capped).

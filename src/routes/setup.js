@@ -11,7 +11,7 @@ import { isValidEmail, jsonError, randomToken } from "../lib/utils.js";
 
 export const setupRoutes = new Hono();
 
-const OPEN_PATHS = /^\/(setup|api\/setup|app\.css|js\/|icons\/|manifest\.json|health)/;
+const OPEN_PATHS = /^\/(setup|api\/setup|api\/site|app\.css|site\.css|js\/|icons\/|manifest\.json|asset\/|health)/;
 
 export function setupGate() {
   return async (c, next) => {
@@ -62,7 +62,8 @@ setupRoutes.post("/api/setup", async (c) => {
   if (!resendKey.startsWith("re_")) return jsonError(c, 400, "bad_resend_key");
   try { new Intl.DateTimeFormat("en", { timeZone: timezone }); } catch { return jsonError(c, 400, "bad_timezone"); }
 
-  const resend = await checkResend(resendKey, fromEmail);
+  // SKIP_RESEND_CHECK in .dev.vars lets local dev finish setup with a fake key.
+  const resend = c.env.SKIP_RESEND_CHECK ? { keyOk: true, domainStatus: "skipped" } : await checkResend(resendKey, fromEmail);
   if (!resend.keyOk) return jsonError(c, 400, "resend_key_rejected");
 
   // Keys are generated once. If setup is re-run (password reset via deleting

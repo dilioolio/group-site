@@ -13,6 +13,7 @@ import { galleryRoutes } from "./routes/gallery.js";
 import { adminRoutes } from "./routes/admin.js";
 import { broadcastRoutes } from "./routes/broadcast.js";
 import { setupRoutes, setupGate } from "./routes/setup.js";
+import { siteRoutes } from "./routes/site.js";
 import { mergeEnv } from "./lib/config.js";
 import { runDailyCleanup } from "./cron.js";
 
@@ -33,7 +34,8 @@ function buildApp() {
     c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
     if ((c.res.headers.get("Content-Type") || "").includes("text/html")) {
       c.res.headers.set("Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; " +
         "base-uri 'self'; form-action 'self'");
     }
@@ -55,6 +57,7 @@ function buildApp() {
   app.use("*", setupGate());
   app.route("/", setupRoutes);
 
+  app.route("/", siteRoutes);
   app.route("/", publicRoutes);
   app.route("/", rsvpRoutes);
   app.route("/", galleryRoutes);

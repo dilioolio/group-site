@@ -51,22 +51,26 @@ rsvpRoutes.post("/api/events/:id/rsvp", async (c) => {
   // Cancelled RSVPs don't need gallery access.
   if (status !== "cancelled") {
     const ttl = Number(c.env.GALLERY_TOKEN_TTL_DAYS || 30);
-    const token = await signGalleryToken(eventId, email, c.env.SESSION_SIGNING_KEY, ttl);
-    const link = `${c.env.SITE_URL}/event/${eventId}/gallery?token=${token}`;
     const eventUrl = `${c.env.SITE_URL}/event/${eventId}`;
     const niceDate = formatEventDate(c.env, event.event_date);
+    const gallery = !!event.gallery_enabled;
+    const link = gallery
+      ? `${c.env.SITE_URL}/event/${eventId}/gallery?token=${await signGalleryToken(eventId, email, c.env.SESSION_SIGNING_KEY, ttl)}`
+      : eventUrl;
     const messageBody =
       `Thanks for RSVP'ing as "${status}" for:\n\n` +
       `${event.title}\n${niceDate}${event.location ? `\n${event.location}` : ""}\n\n` +
-      `Event page: ${eventUrl}\n\n` +
-      `Your private photo gallery link for this hike is below. ` +
-      `It's valid ${ttl} days; photos in the gallery auto-delete 30 days after the hike.\n\n` +
+      (gallery
+        ? `Event page: ${eventUrl}\n\n` +
+          `Your private photo gallery link for this event is below. ` +
+          `It's valid ${ttl} days; photos in the gallery auto-delete 30 days after the event.\n\n`
+        : "") +
       `(If you didn't RSVP, you can ignore this email.)`;
     const { body, htmlBody } = composeEmail(c.env, {
       recipientName: name,
       body: messageBody,
       link,
-      linkLabel: "Open your photo gallery",
+      linkLabel: gallery ? "Open your photo gallery" : "Event page",
     });
     // Fire-and-forget — don't block the response if Gmail is briefly slow.
     c.executionCtx.waitUntil(sendEmail(c.env, {

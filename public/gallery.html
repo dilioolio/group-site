@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hike Photos — Daniel's Hikes</title>
+  <title>Photos — Group Site</title>
   <meta name="theme-color" content="#2C6A49">
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/site.css">
   <style>
     .gallery-head { align-items: flex-start; }
     .gallery-head h1 { font-size: clamp(28px, 4vw, 38px); margin: 10px 0 4px; }
@@ -40,9 +41,9 @@
 
 <header class="topbar">
   <div class="wrap bar">
-    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <a class="brand" href="/"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></a>
     <nav class="navset">
-      <a class="hide-sm" href="#" id="event-back">← Back to hike</a>
+      <a class="hide-sm" href="#" id="event-back">← Back to event</a>
       <a class="cta" href="/admin">Admin</a>
     </nav>
   </div>
@@ -53,8 +54,8 @@
     <div class="shead gallery-head">
       <div>
         <div class="eyebrow persimmon"><span class="dot"></span> Private gallery</div>
-        <h1 class="display" id="event-title">Hike photos</h1>
-        <div class="meta">Only hikers who RSVP'd can see these · auto-delete 30 days after the hike</div>
+        <h1 class="display" id="event-title">Photos</h1>
+        <div class="meta">Only people who RSVP'd can see these · auto-delete 30 days after the event</div>
       </div>
       <div class="right" id="gallery-actions" style="display:none">
         <span class="chip neutral" id="photo-count"></span>
@@ -94,8 +95,8 @@
 
 <footer class="foot">
   <div class="wrap">
-    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
-    <span class="muted">Private area · only people who RSVP'd for this hike can see these</span>
+    <div class="brand"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></div>
+    <span class="muted">Private area · only people who RSVP'd for this event can see these</span>
   </div>
 </footer>
 
@@ -120,7 +121,8 @@
 </script>
 
 <script type="module">
-  import { api, showNotice, daysUntil, resizeImage } from "/js/common.js";
+  import { api, showNotice, daysUntil, resizeImage, loadSite } from "/js/common.js";
+  loadSite();
 
   const eventId = location.pathname.split("/")[2];
   document.getElementById("event-back").href = `/event/${eventId}`;
@@ -176,11 +178,11 @@
   lightbox.addEventListener("click", closeLightbox);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !lightbox.hidden) closeLightbox(); });
 
-  // Try to load the hike title (public endpoint).
+  // Try to load the event title (public endpoint).
   try {
     const { event } = await api(`/api/events/${eventId}`);
     titleEl.textContent = `Photos · ${event.title}`;
-    document.title = `Photos · ${event.title} — Daniel's Hikes`;
+    document.title = `Photos · ${event.title} — ${document.title.split(" — ").pop()}`;
   } catch { /* no-op */ }
 
   if (!token) {

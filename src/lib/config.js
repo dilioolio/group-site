@@ -16,9 +16,38 @@ export async function loadConfig(env) {
   } catch (err) {
     if (!/no such table/i.test(String(err?.message))) throw err;
     await applySchema(env);
+    await saveConfig(env, { SCHEMA_VERSION: SCHEMA_VERSION });
     rows = [];
   }
-  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const cfg = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  if (rows.length && Number(cfg.SCHEMA_VERSION || 1) < SCHEMA_VERSION) {
+    await migrate(env, Number(cfg.SCHEMA_VERSION || 1));
+    cfg.SCHEMA_VERSION = String(SCHEMA_VERSION);
+  }
+  return cfg;
+}
+
+// Schema changes after the first release go here, keyed by the version they
+// bring the DB up to. schema.sql always describes the LATEST shape (fresh
+// installs), so each entry is only the ALTER for an existing DB. Runs on the
+// next request after the user redeploys a newer version — no terminal.
+export const SCHEMA_VERSION = 2;
+const MIGRATIONS = {
+  2: [
+    "ALTER TABLE events ADD COLUMN category TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE events ADD COLUMN gallery_enabled INTEGER NOT NULL DEFAULT 1",
+  ],
+};
+
+async function migrate(env, from) {
+  for (let v = from + 1; v <= SCHEMA_VERSION; v++) {
+    for (const sql of MIGRATIONS[v] || []) {
+      try { await env.DB.prepare(sql).run(); }
+      catch (err) { if (!/duplicate column/i.test(String(err?.message))) throw err; }
+    }
+  }
+  await applySchema(env); // new tables/indexes, all IF NOT EXISTS
+  await saveConfig(env, { SCHEMA_VERSION });
 }
 
 export async function applySchema(env) {

@@ -111,3 +111,27 @@ function urlBase64ToUint8Array(b64) {
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+
+// Fetch site branding once per page and apply it: name, seal, <title>,
+// theme-color. Cached in sessionStorage so navigation doesn't flash defaults.
+export async function loadSite() {
+  try {
+    const cached = sessionStorage.getItem("site");
+    if (cached) { const s = JSON.parse(cached); refreshSite(); return s; }
+  } catch { /* ignore */ }
+  return refreshSite();
+}
+async function refreshSite() {
+  const site = await api("/api/site");
+  try { sessionStorage.setItem("site", JSON.stringify(site)); } catch { /* ignore */ }
+  applySite(site);
+  return site;
+}
+export function applySite(site) {
+  document.querySelectorAll("[data-site-name]").forEach((el) => { el.textContent = site.name; });
+  document.querySelectorAll("[data-site-seal]").forEach((el) => { el.textContent = site.seal; });
+  document.querySelectorAll("[data-site-tagline]").forEach((el) => { el.textContent = site.tagline; el.hidden = !site.tagline; });
+  document.title = document.title.replace("Group Site", site.name);
+  if (site.colors?.primary) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", site.colors.primary);
+  if (site.icon) document.querySelector('link[rel="icon"]')?.setAttribute("href", site.icon);
+}

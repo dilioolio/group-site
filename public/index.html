@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Daniel's Hikes</title>
+  <title>Group Site</title>
   <meta name="theme-color" content="#2C6A49">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icon-192.png" type="image/png">
@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/site.css">
   <style>
     /* Page-scoped tweaks layered on top of the shared design system. */
     .feature .lede { margin: 0; }
@@ -18,9 +19,9 @@
     .feature .actions .btn { white-space: nowrap; }
     .going { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-    .hike-card { color: inherit; }
-    .hike-card .scene { display: block; }
-    .hike-card .scene img { width: 100%; height: 100%; object-fit: cover; }
+    .event-card { color: inherit; }
+    .event-card .scene { display: block; }
+    .event-card .scene img { width: 100%; height: 100%; object-fit: cover; }
 
     .empty-filler { padding: 18px 22px; color: var(--muted); font-size: 14.5px; text-align: center; }
   </style>
@@ -29,10 +30,10 @@
 
 <header class="topbar">
   <div class="wrap bar">
-    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <a class="brand" href="/"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></a>
     <nav class="navset">
       <a class="hide-sm" href="#upcoming">Upcoming</a>
-      <a class="hide-sm" href="#previous">Past hikes</a>
+      <a class="hide-sm" href="#previous">Past events</a>
       <a class="cta" href="/admin">Admin</a>
     </nav>
   </div>
@@ -41,7 +42,12 @@
 <main>
   <div class="wrap section" id="loading-wrap"><p id="loading" class="muted">Loading…</p></div>
 
-  <!-- Featured (today's hike, or first upcoming if none today) -->
+  <!-- Category filter (hidden when the site has a single category) -->
+  <section class="section" id="cat-section" style="padding-bottom:0;display:none">
+    <div class="wrap"><div class="tabbar" id="cat-tabs" style="margin-bottom:0"></div></div>
+  </section>
+
+  <!-- Featured (today's event, or first upcoming if none today) -->
   <section class="section" id="featured-section" style="padding-bottom:14px;display:none">
     <div class="wrap">
       <div class="eyebrow persimmon" id="featured-eyebrow" style="margin-bottom:14px"><span class="dot"></span> Next up</div>
@@ -53,10 +59,10 @@
   <section class="section" id="upcoming" style="display:none">
     <div class="wrap">
       <div class="shead">
-        <h2 class="display">Upcoming hikes</h2>
+        <h2 class="display">Upcoming</h2>
       </div>
       <div class="grid-3" data-bucket="upcoming"></div>
-      <p class="empty-filler" data-empty="upcoming" hidden>No upcoming hikes yet — check back soon.</p>
+      <p class="empty-filler" data-empty="upcoming" hidden>No upcoming events yet — check back soon.</p>
     </div>
   </section>
 
@@ -69,22 +75,22 @@
         <h2 class="display">Recent memories</h2>
       </div>
       <div class="grid-3" data-bucket="previous"></div>
-      <p class="empty-filler" data-empty="previous" hidden>No previous hikes to show.</p>
+      <p class="empty-filler" data-empty="previous" hidden>No previous events to show.</p>
     </div>
   </section>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
-    <span class="muted">Self-hosted · photos auto-expire 30 days after each hike</span>
+    <div class="brand"><span class="seal" data-site-seal>✦</span><b data-site-name>Group Site</b></div>
+    <span class="muted">Self-hosted · photos auto-expire 30 days after each event</span>
   </div>
 </footer>
 
 <script src="/scenes.js"></script>
 
 <script type="module">
-  import { api, formatDate } from "/js/common.js";
+  import { api, formatDate, loadSite } from "/js/common.js";
 
   const loading = document.getElementById("loading");
   const loadingWrap = document.getElementById("loading-wrap");
@@ -108,7 +114,7 @@
     return "previous";
   }
 
-  // Deterministic scene per event so the same hike always shows the same fallback art.
+  // Deterministic scene per event so the same event always shows the same fallback art.
   const SCENES = ["dawn", "day", "dusk", "forest", "night"];
   function sceneFor(idStr, salt = 0) {
     let h = 0;
@@ -193,6 +199,8 @@
         })();
 
     const daysSinceEvent = (Date.now() - new Date(ev.event_date).getTime()) / 86400000;
+    const catChip = site.categories.length > 1 && catById[ev.category]
+      ? `<span class="chip neutral" style="margin-right:6px">${escapeHtml(catById[ev.category].name)}</span>` : "";
     const rowRight = isPrevious
       ? (isCancelled
           ? `<span class="chip persimmon">cancelled</span>`
@@ -200,7 +208,7 @@
       : `<span class="chip"><span class="dot"></span> ${ev.rsvp_count} going</span>`;
 
     const card = document.createElement("a");
-    card.className = "card hike-card";
+    card.className = "card event-card";
     card.href = `/event/${ev.id}`;
     if (ev.primary_image_key) {
       card.innerHTML = `
@@ -211,7 +219,7 @@
           <h3>${escapeHtml(ev.title)}</h3>
           <div class="meta">${escapeHtml(shortDate(ev.event_date))} · ${escapeHtml(timeOnly(ev.event_date))}${ev.location ? " · " + escapeHtml(ev.location) : ""}</div>
           <div class="row">
-            <span class="meta" style="font-size:13.5px">${isPrevious ? `${ev.rsvp_count} hiked` : ""}</span>
+            <span class="meta" style="font-size:13.5px">${catChip}${isPrevious ? `${ev.rsvp_count} went` : ""}</span>
             ${rowRight}
           </div>
         </div>
@@ -226,7 +234,7 @@
           <h3>${escapeHtml(ev.title)}</h3>
           <div class="meta">${escapeHtml(shortDate(ev.event_date))} · ${escapeHtml(timeOnly(ev.event_date))}${ev.location ? " · " + escapeHtml(ev.location) : ""}</div>
           <div class="row">
-            <span class="meta" style="font-size:13.5px">${isPrevious ? `${ev.rsvp_count} hiked` : ""}</span>
+            <span class="meta" style="font-size:13.5px">${catChip}${isPrevious ? `${ev.rsvp_count} went` : ""}</span>
             ${rowRight}
           </div>
         </div>
@@ -235,15 +243,36 @@
     return card;
   }
 
-  try {
-    const { events } = await api("/api/events");
-    loadingWrap.style.display = "none";
+  // Category tabs: a filter, not a gate. Choice remembered per browser.
+  const site = await loadSite();
+  const catById = Object.fromEntries(site.categories.map((c) => [c.id, c]));
+  let activeCat = localStorage.getItem("cat_filter") || "all";
+  if (activeCat !== "all" && !catById[activeCat]) activeCat = "all";
+  if (site.categories.length > 1) {
+    const tabs = document.getElementById("cat-tabs");
+    tabs.innerHTML = [{ id: "all", name: "All" }, ...site.categories]
+      .map((c) => `<div class="t${c.id === activeCat ? " on" : ""}" data-cat="${c.id}">${escapeHtml(c.name)}</div>`).join("");
+    document.getElementById("cat-section").style.display = "block";
+    tabs.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-cat]"); if (!t) return;
+      activeCat = t.dataset.cat; localStorage.setItem("cat_filter", activeCat);
+      tabs.querySelectorAll(".t").forEach((x) => x.classList.toggle("on", x === t));
+      render();
+    });
+  }
+
+  let allEvents = [];
+  function render() {
+    const events = activeCat === "all" ? allEvents : allEvents.filter((ev) => ev.category === activeCat);
+    for (const id of ["featured-section", "upcoming", "previous"]) document.getElementById(id).style.display = "none";
+    document.querySelectorAll("[data-bucket]").forEach((g) => { g.innerHTML = ""; });
+    document.querySelectorAll("[data-empty]").forEach((p) => { p.hidden = true; });
 
     const buckets = { today: [], upcoming: [], previous: [] };
     for (const ev of events) buckets[bucketFor(ev.event_date)].push(ev);
     buckets.previous.reverse(); // events come back ASC — flip so newest-past is first
 
-    // Featured slot: today's first hike, or the next upcoming. Falls back to nothing.
+    // Featured slot: today's first event, or the next upcoming. Falls back to nothing.
     const featured = buckets.today[0] || buckets.upcoming[0] || null;
     if (featured) {
       renderFeatured(featured);
@@ -269,8 +298,14 @@
     else for (const ev of buckets.previous) prevGrid.appendChild(renderCard(ev, { bucket: "previous" }));
 
     if (window.paintScenes) window.paintScenes();
+  }
+
+  try {
+    ({ events: allEvents } = await api("/api/events"));
+    loadingWrap.style.display = "none";
+    render();
   } catch (err) {
-    loading.textContent = "Couldn't load hikes: " + err.message;
+    loading.textContent = "Couldn't load events: " + err.message;
   }
 </script>
 
