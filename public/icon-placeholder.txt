@@ -1,0 +1,3 @@
+Replace icon-192.png and icon-512.png with real PNG icons before deploying.
+For iOS PWA install, the 192 and 512 versions are both important.
+Quick option: use any 512x512 photo cropped, then export 192x192 from it.

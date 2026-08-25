@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mountain landscape placeholder">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe2ec"/>
+      <stop offset="100%" stop-color="#f3ecd6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1230" cy="270" r="78" fill="#f7d572" opacity="0.9"/>
+  <path d="M0,640 L240,420 L420,520 L640,360 L840,500 L1080,400 L1280,510 L1480,420 L1600,470 L1600,900 L0,900 Z" fill="#a4bcae" opacity="0.85"/>
+  <path d="M0,760 L180,560 L380,690 L580,500 L760,680 L960,560 L1140,720 L1380,580 L1600,720 L1600,900 L0,900 Z" fill="#5e8770"/>
+  <path d="M0,830 L260,720 L500,790 L800,710 L1100,800 L1400,720 L1600,790 L1600,900 L0,900 Z" fill="#2b7a4b"/>
+</svg>

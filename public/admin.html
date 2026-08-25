@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="en" data-type="serif" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin — Daniel's Hikes</title>
+  <meta name="theme-color" content="#2C6A49">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    /* Login. */
+    .login-card { max-width: 420px; margin: 60px auto; padding: 28px; }
+    .login-card h2 { font-family: var(--display); font-weight: 500; font-size: 22px; margin: 0 0 6px; }
+
+    /* Dashboard rows. */
+    .arow { gap: 18px; }
+    .arow .a-info h3 { font-family: var(--display); font-weight: 500; font-size: 19px; line-height: 1.2; }
+    .arow .a-info .meta { font-size: 14px; margin-top: 4px; }
+    .arow img.thumb { width: 110px; height: 78px; border-radius: 11px; flex: 0 0 auto; object-fit: cover; }
+    .arow .thumb-wrap { width: 110px; height: 78px; border-radius: 11px; overflow: hidden; flex: 0 0 auto; position: relative; }
+    .arow .thumb-wrap img.thumb { width: 100%; height: 100%; border-radius: 0; }
+    .arow .scene { width: 110px; height: 78px; border-radius: 11px; flex: 0 0 auto; }
+    .arow.cancelled { opacity: .72; }
+
+    /* Editor. */
+    .editor { display: grid; grid-template-columns: 1.4fr 1fr; gap: 30px; align-items: start; }
+    @media (max-width: 920px) { .editor { grid-template-columns: 1fr; } }
+    .pane { display: none; }
+    .pane.on { display: block; }
+
+    /* Existing-images grid inside the editor. */
+    #existing-images { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    #existing-images > div { position: relative; border-radius: 11px; overflow: hidden; box-shadow: var(--shadow-s); }
+    #existing-images > div.is-primary { box-shadow: 0 0 0 2px var(--pine); }
+    #existing-images img { width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; display: block; }
+    #existing-images .row-tiny { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; font-size: 12px; color: var(--ink-2); background: var(--surface); }
+    #existing-images .star { color: var(--pine); font-weight: 700; }
+
+    /* RSVP table. */
+    .table tr td:nth-child(1) { color: var(--ink); font-weight: 500; }
+
+    /* Cancel & Help dialogs. */
+    dialog { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-l); }
+    dialog::backdrop { background: rgba(20,28,22,.45); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+    .cancel-dialog { max-width: 480px; width: calc(100vw - 32px); }
+    .cancel-dialog form { padding: 22px; }
+    .cancel-dialog h2 { font-family: var(--display); font-weight: 500; font-size: 22px; margin: 0 0 6px; }
+    .help-dialog { max-width: 760px; width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+    .help-dialog form { padding: 26px; }
+    .help-dialog h2 { font-family: var(--display); font-weight: 500; font-size: 24px; margin: 0; }
+    .help-dialog h3 { font-family: var(--display); font-weight: 500; font-size: 17px; margin: 20px 0 8px; color: var(--pine-deep); }
+    .help-dialog ul { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; padding-left: 20px; margin: 0; }
+    .help-dialog ul li { margin: 4px 0; }
+    .help-dialog strong { color: var(--ink); }
+
+    .qpill .ok  { color: var(--pine-deep); }
+    .qpill .warn{ color: #92651A; }
+
+    .empty-filler { padding: 18px 22px; color: var(--muted); font-size: 14.5px; text-align: center; }
+
+    .ev-suppress-label { display: flex; gap: 9px; align-items: center; margin-top: 16px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap bar">
+    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <nav class="navset">
+      <a href="#" id="help-btn">? Help</a>
+      <a href="#" id="logout" style="color:var(--persimmon);font-weight:600;display:none">Log out</a>
+    </nav>
+  </div>
+</header>
+
+<main class="section">
+  <div class="wrap">
+
+    <!-- LOGIN -->
+    <section id="login-card" class="card login-card">
+      <h2>Admin login</h2>
+      <form id="login-form">
+        <label class="field-l" for="password" style="margin-top:8px">Password</label>
+        <input class="input" id="password" type="password" required autofocus>
+        <div style="display:flex;margin-top:14px"><button class="btn block" type="submit">Log in</button></div>
+      </form>
+      <div id="login-msg" class="notice" style="display:none;margin-top:14px"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dash" style="display:none">
+      <div class="shead">
+        <div>
+          <div class="eyebrow"><span class="dot"></span> Organiser</div>
+          <h1 class="display" style="font-size:clamp(28px,4vw,38px);margin-top:8px">Dashboard</h1>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn" id="new-event-btn">+ New hike</button>
+        </div>
+      </div>
+      <div class="stack" id="events-list" style="gap:14px"></div>
+    </section>
+
+    <!-- EDITOR -->
+    <section id="editor" style="display:none">
+      <div class="shead">
+        <div>
+          <div class="eyebrow"><span class="dot"></span> Editing hike</div>
+          <h1 class="display" id="editor-title" style="font-size:clamp(26px,3.6vw,34px);margin-top:8px">Edit hike</h1>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <div class="t on" data-tab="details">Details</div>
+        <div class="t" data-tab="rsvps">RSVPs</div>
+        <div class="t" data-tab="notify">Notify</div>
+        <div class="t" data-tab="broadcasts">Broadcasts</div>
+      </div>
+
+      <!-- DETAILS PANE -->
+      <section class="pane on" data-pane="details">
+        <div class="editor">
+          <div>
+            <form id="event-form">
+              <input id="event-id" type="hidden">
+
+              <label class="field-l" for="ev-title">Title</label>
+              <input class="input" id="ev-title" type="text" required>
+
+              <label class="field-l" style="margin-top:14px">Date &amp; time</label>
+              <div class="dl-grid four">
+                <select class="select" id="ev-day" required></select>
+                <select class="select" id="ev-time" required></select>
+                <select class="select" id="ev-month" required></select>
+                <select class="select" id="ev-year" required></select>
+              </div>
+
+              <label class="field-l" for="ev-location" style="margin-top:14px">Meetup location</label>
+              <input class="input" id="ev-location" type="text" required>
+
+              <label class="field-l" for="ev-description" style="margin-top:14px">Description <span class="muted" style="font-weight:400">· min 20 characters</span></label>
+              <textarea class="textarea" id="ev-description" required minlength="20"></textarea>
+
+              <div id="ev-status-row">
+                <label class="field-l" for="ev-status" style="margin-top:14px">Status</label>
+                <select class="select" id="ev-status" style="max-width:220px">
+                  <option value="active">Active</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <label id="ev-suppress-row" class="ev-suppress-label">
+                <input type="checkbox" id="ev-suppress"> Suppress change notifications for this save
+              </label>
+
+              <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
+                <button type="submit" class="btn">Save changes</button>
+                <button type="button" class="btn ghost" id="close-editor">Back</button>
+              </div>
+            </form>
+            <div id="event-msg" class="notice" style="display:none;margin-top:14px"></div>
+          </div>
+
+          <div>
+            <div class="eyebrow"><span class="dot"></span> Photos</div>
+            <p class="meta" style="font-size:13.5px;margin:8px 0 14px">Organiser photos for the event page — they don't expire. Click one to set the ★ cover.</p>
+
+            <input id="image-file" type="file" accept="image/jpeg,image/png,image/webp" multiple style="display:none">
+            <label id="upload-label" for="image-file" class="uploader" style="margin-bottom:12px;cursor:pointer;display:block">
+              <div style="font-weight:600;font-size:14.5px">＋ Add photos</div>
+              <div id="upload-hint" class="meta" style="font-size:12.5px;margin-top:2px">uploads instantly when picked</div>
+            </label>
+
+            <div id="existing-images"></div>
+
+            <div class="notice info" style="margin-top:16px;font-size:13.5px">
+              Editing date, location or status will automatically email &amp; push everyone who RSVP'd.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RSVPS PANE -->
+      <section class="pane" data-pane="rsvps">
+        <div class="card" style="padding:20px;margin-bottom:20px">
+          <h3 class="display" style="font-size:20px;margin:0 0 4px">Invite by email</h3>
+          <p class="meta" style="font-size:13.5px;margin:0 0 12px">One per line or comma-separated. Each gets a link to this hike — they still RSVP themselves.</p>
+          <textarea class="textarea" id="invite-emails" placeholder="alice@email.com&#10;bob@email.com"></textarea>
+          <div style="display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap">
+            <button class="btn" id="invite-send">Send invitations</button>
+          </div>
+          <div id="invite-result" class="notice" style="display:none;margin-top:12px"></div>
+        </div>
+
+        <h3 class="display" style="font-size:20px;margin:0 0 10px">Current RSVPs <span id="rsvp-count-label" class="muted" style="font-weight:400"></span></h3>
+        <div class="card" style="padding:6px 12px">
+          <div id="rsvp-list"></div>
+        </div>
+      </section>
+
+      <!-- NOTIFY PANE -->
+      <section class="pane" data-pane="notify">
+        <div class="card" style="padding:22px;max-width:620px">
+          <h3 class="display" style="font-size:20px;margin:0 0 4px">Send a quick update</h3>
+          <p class="meta" style="font-size:13.5px;margin:0 0 14px">Free-text note to all attendees by email + push. No confirmation tracking — use Broadcasts for that.</p>
+          <textarea class="textarea" id="notify-msg" placeholder="e.g. Meeting at the lower car park instead — same time."></textarea>
+          <div style="display:flex;margin-top:14px"><button class="btn" id="notify-send">Send to attendees</button></div>
+          <div id="notify-result" class="notice" style="display:none;margin-top:12px"></div>
+        </div>
+      </section>
+
+      <!-- BROADCASTS PANE -->
+      <section class="pane" data-pane="broadcasts">
+        <div class="card" style="padding:22px;max-width:620px;margin-bottom:22px">
+          <h3 class="display" style="font-size:20px;margin:0 0 4px">New confirmable broadcast</h3>
+          <p class="meta" style="font-size:13.5px;margin:0 0 14px">Each attendee gets a unique Confirm link. You'll see who has confirmed.</p>
+          <label class="field-l">Subject</label>
+          <input class="input" id="bcast-subject" type="text" placeholder="Important: trailhead changed">
+          <label class="field-l" style="margin-top:12px">Message</label>
+          <textarea class="textarea" id="bcast-body"></textarea>
+          <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
+            <button class="btn" id="bcast-send">Send broadcast</button>
+          </div>
+          <div id="bcast-result" class="notice" style="display:none;margin-top:12px"></div>
+        </div>
+
+        <h3 class="display" style="font-size:20px;margin:0 0 10px">Past broadcasts</h3>
+        <div id="bcast-list" class="stack" style="gap:14px"></div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
+    <span class="muted">Admin · changes to date, place or status auto-notify attendees</span>
+  </div>
+</footer>
+
+<!-- Cancel-hike dialog -->
+<dialog id="cancel-dialog" class="cancel-dialog">
+  <form id="cancel-form" method="dialog">
+    <h2>Cancel <span id="cancel-title"></span>?</h2>
+    <p class="meta" style="font-size:13.5px">Attendees will be emailed and pushed a cancellation notice including the reason.</p>
+    <label class="field-l" for="cancel-reason" style="margin-top:14px">Reason</label>
+    <select class="select" id="cancel-reason" required>
+      <option value="" disabled selected>Pick a reason…</option>
+      <option value="Bad weather">Bad weather</option>
+      <option value="Trail closure">Trail closure</option>
+      <option value="Low RSVPs">Low RSVPs</option>
+      <option value="Organiser unavailable">Organiser unavailable</option>
+      <option value="Safety concerns">Safety concerns</option>
+      <option value="__other">Other…</option>
+    </select>
+    <div id="cancel-other-wrap" style="display:none;margin-top:8px">
+      <label class="field-l" for="cancel-other">Other reason (max 30 chars)</label>
+      <input class="input" id="cancel-other" type="text" maxlength="30">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      <button type="button" class="btn danger" id="cancel-confirm">Confirm cancel</button>
+      <button type="button" class="btn ghost" id="cancel-back">Back</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Help dialog -->
+<dialog id="help-dialog" class="help-dialog">
+  <form method="dialog">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <h2 style="flex:1">How this admin works</h2>
+      <button type="button" class="btn ghost sm" id="help-close" aria-label="Close">Close</button>
+    </div>
+
+    <h3>Creating &amp; editing a hike</h3>
+    <ul>
+      <li>You must fill in <strong>title, date/time, meetup location, and a description of at least 20 characters</strong>. Save is blocked until all of those are set.</li>
+      <li>Date / time pickers default to today's month/year and 09:00 — only the day is left blank for you to pick. Time is in 5-minute increments.</li>
+      <li>Two active hikes can't share the same start time. Cancelled hikes don't block the slot.</li>
+    </ul>
+
+    <h3>Photos on a hike</h3>
+    <ul>
+      <li>For a new hike, save the basic details first — the photo uploader unlocks after that.</li>
+      <li>Photos upload instantly when you pick them. Save is disabled while an upload is in progress.</li>
+      <li>After upload, <strong>click any photo</strong> to make it the primary one (shown on event cards and the hero image). The primary has a green border and a ★.</li>
+      <li>Save is blocked if photos exist but none is primary.</li>
+    </ul>
+
+    <h3>Cancelling a hike</h3>
+    <ul>
+      <li>Each active hike has a red <strong>Cancel</strong> button on the dashboard.</li>
+      <li>You pick a reason (5 common options + Other up to 30 characters). The reason goes to attendees as part of the cancellation email and push.</li>
+      <li>Cancelled hikes show a big diagonal CANCELLED banner across their image everywhere they appear.</li>
+    </ul>
+
+    <h3>Material changes (date / location / status)</h3>
+    <ul>
+      <li>When you edit any of those three on an existing hike and click Save, attendees are automatically emailed + push-notified about the change. (Title and description edits don't notify.)</li>
+      <li>To skip the auto-notify on a particular save, tick <em>Suppress change notifications</em> at the bottom of the Details tab.</li>
+    </ul>
+
+    <h3>How notifications reach attendees</h3>
+    <ul>
+      <li><strong>Everyone who RSVPs always gets the email</strong> — that's automatic and not opt-out-able from the app.</li>
+      <li><strong>Push notifications (desktop / mobile) are opt-in.</strong> After saving an RSVP the user sees a "Get instant change alerts?" popup. Only those who click Yes (and Allow in their browser's own prompt) will receive pushes. This applies to cancellations, Notify, Broadcasts, and material edits.</li>
+      <li><strong>Notify and Broadcast messages also appear as bubbles on the event page itself</strong> — even members who missed the email or push see the latest updates when they revisit the hike. Notify bubbles have a green border; Broadcast bubbles have a persimmon border and show the subject. Newest first.</li>
+      <li>The bubbles are only displayed on <strong>today's hike and upcoming hikes</strong>. They're hidden once the hike has passed.</li>
+    </ul>
+
+    <h3>Tabs inside the editor</h3>
+    <ul>
+      <li><strong>RSVPs</strong> — see who's coming, plus an Invite-by-email box that sends a one-click "view &amp; RSVP" email. Recipients still RSVP themselves.</li>
+      <li><strong>Notify</strong> — send a quick free-text update to attendees. Goes by email and push. No confirmation tracking.</li>
+      <li><strong>Broadcasts</strong> — for important messages. Each recipient gets a unique <em>Confirm</em> link. You see who's confirmed and who hasn't.</li>
+    </ul>
+
+    <h3>Public visibility rules (what members see)</h3>
+    <ul>
+      <li>The home page shows hikes from the <strong>last 90 days through any future date</strong>.</li>
+      <li>Cancelled and past hikes can't be RSVP'd to. Past hikes show a "This hike has already happened" banner; the description collapses with a See more toggle.</li>
+      <li>The "Open your private photo gallery" link only appears on the day-of and for 30 days after.</li>
+    </ul>
+
+    <h3>Member photo gallery</h3>
+    <ul>
+      <li>A <strong>shared per-hike album</strong> so attendees can post and view photos. Private to the people who RSVP'd for that specific hike.</li>
+      <li>Anyone with gallery access can download individual photos or every photo as a zip.</li>
+      <li>Members get a gallery link in their RSVP confirmation email; they can request a resend if lost.</li>
+      <li>Member-uploaded photos auto-delete <strong>30 days after the hike date</strong>.</li>
+      <li>You can moderate (delete) any member photo from the gallery view.</li>
+    </ul>
+  </form>
+</dialog>
+
+<script src="/scenes.js"></script>
+
+<script type="module">
+  import { api, formatDate, showNotice, clearNotice } from "/js/common.js";
+
+  let token = sessionStorage.getItem("admin_token") || "";
+  let currentEventId = null;
+
+  const loginCard = document.getElementById("login-card");
+  const loginForm = document.getElementById("login-form");
+  const loginMsg = document.getElementById("login-msg");
+  const dash = document.getElementById("dash");
+  const editor = document.getElementById("editor");
+  const eventsList = document.getElementById("events-list");
+  const logoutLink = document.getElementById("logout");
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[ch]));
+  }
+
+  function authed(opts = {}) {
+    return { ...opts, headers: { ...(opts.headers || {}), "Authorization": `Bearer ${token}` } };
+  }
+
+  function show(section) {
+    loginCard.style.display = section === "login" ? "block" : "none";
+    dash.style.display = section === "dash" ? "block" : "none";
+    editor.style.display = section === "editor" ? "block" : "none";
+    logoutLink.style.display = section === "login" ? "none" : "inline";
+  }
+
+  // Deterministic scene per event (used for dashboard thumbs when no real image).
+  const SCENES = ["dawn", "day", "dusk", "forest", "night"];
+  function sceneFor(idStr, salt = 0) {
+    let h = 0;
+    const s = String(idStr || "x");
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return { scene: SCENES[(h + salt) % SCENES.length], seed: ((h >> 3) + salt * 7) % 1000 || 1 };
+  }
+
+  async function init() {
+    if (!token) { show("login"); return; }
+    try {
+      await refreshEvents();
+      show("dash");
+    } catch (err) {
+      if (err.status === 401) { sessionStorage.removeItem("admin_token"); token = ""; show("login"); }
+      else throw err;
+    }
+  }
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const password = document.getElementById("password").value;
+    try {
+      const r = await api("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) });
+      token = r.token;
+      sessionStorage.setItem("admin_token", token);
+      clearNotice(loginMsg);
+      await init();
+    } catch (err) {
+      showNotice(loginMsg, "error", "Login failed.");
+    }
+  });
+
+  logoutLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    sessionStorage.removeItem("admin_token");
+    token = "";
+    show("login");
+  });
+
+  async function refreshEvents() {
+    const { events } = await api("/api/admin/events", authed());
+    eventsList.innerHTML = "";
+    if (events.length === 0) {
+      eventsList.innerHTML = `<p class="empty-filler">No hikes yet. Click "+ New hike" to add one.</p>`;
+      return;
+    }
+    for (const ev of events) {
+      const isCancelled = ev.status === "cancelled";
+      const card = document.createElement("div");
+      card.className = "card arow" + (isCancelled ? " cancelled" : "");
+
+      // Thumb: real image, or generative scene placeholder.
+      let thumbHtml;
+      if (ev.primary_image_key) {
+        const wrapCls = "thumb-wrap" + (isCancelled ? " cancel-banner" : "");
+        thumbHtml = `<div class="${wrapCls}"><img class="thumb" src="/img/${ev.primary_image_key}" alt=""></div>`;
+      } else {
+        const { scene, seed } = sceneFor(ev.id);
+        const cancelClass = isCancelled ? " cancelled" : "";
+        thumbHtml = `<div class="scene${cancelClass}" data-scene="${scene}" data-seed="${seed}"></div>`;
+      }
+
+      const cancelChip = isCancelled ? `<span class="chip persimmon" style="padding:2px 9px;margin-left:6px">cancelled</span>` : "";
+      const cancelBtn = isCancelled
+        ? ""
+        : `<button class="btn danger sm" data-cancel="${ev.id}" data-title="${escapeHtml(ev.title)}">Cancel</button>`;
+
+      card.innerHTML = `
+        ${thumbHtml}
+        <div class="a-info">
+          <h3>${escapeHtml(ev.title)}${cancelChip}</h3>
+          <div class="meta">${escapeHtml(formatDate(ev.event_date))}${ev.location ? " · " + escapeHtml(ev.location) : ""} · <b style="color:var(--pine)">${ev.rsvp_count} going</b></div>
+        </div>
+        <div class="a-act">
+          <button class="btn soft sm" data-edit="${ev.id}">Edit</button>
+          <a class="btn ghost sm" href="/event/${ev.id}">View</a>
+          ${cancelBtn}
+        </div>
+      `;
+      eventsList.appendChild(card);
+    }
+    eventsList.querySelectorAll("[data-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => openEditor(btn.dataset.edit));
+    });
+    eventsList.querySelectorAll("[data-cancel]").forEach((btn) => {
+      btn.addEventListener("click", () => cancelEvent(btn.dataset.cancel, btn.dataset.title));
+    });
+    if (window.paintScenes) window.paintScenes();
+  }
+
+  const cancelDialog = document.getElementById("cancel-dialog");
+  const cancelTitleEl = document.getElementById("cancel-title");
+  const cancelReasonEl = document.getElementById("cancel-reason");
+  const cancelOtherWrap = document.getElementById("cancel-other-wrap");
+  const cancelOtherEl = document.getElementById("cancel-other");
+  let pendingCancelId = null;
+
+  cancelReasonEl.addEventListener("change", () => {
+    const isOther = cancelReasonEl.value === "__other";
+    cancelOtherWrap.style.display = isOther ? "block" : "none";
+    if (isOther) cancelOtherEl.focus();
+  });
+
+  document.getElementById("cancel-back").addEventListener("click", () => cancelDialog.close());
+
+  document.getElementById("cancel-confirm").addEventListener("click", async () => {
+    let reason = cancelReasonEl.value;
+    if (!reason) { cancelReasonEl.focus(); return; }
+    if (reason === "__other") {
+      reason = cancelOtherEl.value.trim();
+      if (!reason) { cancelOtherEl.focus(); return; }
+    }
+    const id = pendingCancelId;
+    cancelDialog.close();
+    try {
+      const r = await api(`/api/admin/events/${id}`, {
+        ...authed({ method: "PUT" }),
+        body: JSON.stringify({ status: "cancelled", cancel_reason: reason }),
+      });
+      if (r.notified) {
+        alert(`Hike cancelled. Notified ${r.notified.recipients} (${r.notified.emails_sent} email, ${r.notified.push_sent} push).`);
+      }
+      await refreshEvents();
+    } catch (err) {
+      alert("Couldn't cancel: " + err.message);
+    }
+  });
+
+  function cancelEvent(id, title) {
+    pendingCancelId = id;
+    cancelTitleEl.textContent = `"${title}"`;
+    cancelReasonEl.value = "";
+    cancelOtherEl.value = "";
+    cancelOtherWrap.style.display = "none";
+    cancelDialog.showModal();
+  }
+
+  document.getElementById("new-event-btn").addEventListener("click", () => openEditor(null));
+
+  // Help modal
+  const helpDialog = document.getElementById("help-dialog");
+  document.getElementById("help-btn").addEventListener("click", (e) => { e.preventDefault(); helpDialog.showModal(); });
+  document.getElementById("help-close").addEventListener("click", () => helpDialog.close());
+  document.getElementById("close-editor").addEventListener("click", () => { show("dash"); refreshEvents(); });
+
+  // Tab switching
+  document.querySelectorAll(".tabbar .t").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tabbar .t").forEach((t) => t.classList.remove("on"));
+      document.querySelectorAll(".pane").forEach((p) => p.classList.remove("on"));
+      tab.classList.add("on");
+      document.querySelector(`.pane[data-pane="${tab.dataset.tab}"]`).classList.add("on");
+      if (tab.dataset.tab === "rsvps") loadRsvps();
+      if (tab.dataset.tab === "broadcasts") loadBroadcasts();
+    });
+  });
+
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  function option(value, label, opts = {}) {
+    const o = document.createElement("option");
+    o.value = value; o.textContent = label;
+    if (opts.disabled) o.disabled = true;
+    return o;
+  }
+
+  function fillSelect(sel, items, placeholder) {
+    sel.innerHTML = "";
+    if (placeholder) {
+      const p = option("", placeholder, { disabled: true });
+      p.selected = true;
+      sel.appendChild(p);
+    }
+    for (const it of items) sel.appendChild(option(it.value, it.label));
+  }
+
+  function daysInMonth(year, month1) {
+    return new Date(year, month1, 0).getDate();
+  }
+
+  function refreshDayOptions(keepDay) {
+    const yearSel = document.getElementById("ev-year");
+    const monthSel = document.getElementById("ev-month");
+    const daySel = document.getElementById("ev-day");
+    const y = Number(yearSel.value);
+    const m = Number(monthSel.value);
+    if (!y || !m) return;
+    const max = daysInMonth(y, m);
+    const items = [];
+    for (let d = 1; d <= max; d++) items.push({ value: String(d), label: String(d) });
+    const prev = keepDay ?? daySel.value;
+    fillSelect(daySel, items, "Day");
+    if (prev && Number(prev) <= max) daySel.value = prev;
+  }
+
+  (function fillDateTimeOptions() {
+    const now = new Date();
+    const years = [];
+    for (let y = now.getFullYear(); y <= now.getFullYear() + 2; y++) years.push({ value: String(y), label: String(y) });
+    fillSelect(document.getElementById("ev-year"), years);
+    document.getElementById("ev-year").value = String(now.getFullYear());
+
+    const months = MONTH_NAMES.map((name, i) => ({ value: String(i + 1), label: name }));
+    fillSelect(document.getElementById("ev-month"), months);
+    document.getElementById("ev-month").value = String(now.getMonth() + 1);
+
+    refreshDayOptions();
+
+    const times = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        const v = `${pad2(h)}:${pad2(m)}`;
+        times.push({ value: v, label: v });
+      }
+    }
+    fillSelect(document.getElementById("ev-time"), times);
+    document.getElementById("ev-time").value = "09:00";
+
+    document.getElementById("ev-month").addEventListener("change", () => refreshDayOptions());
+    document.getElementById("ev-year").addEventListener("change", () => refreshDayOptions());
+  })();
+
+  function resetDateTimePickers() {
+    const now = new Date();
+    document.getElementById("ev-year").value = String(now.getFullYear());
+    document.getElementById("ev-month").value = String(now.getMonth() + 1);
+    refreshDayOptions("");
+    document.getElementById("ev-day").value = "";
+    document.getElementById("ev-time").value = "09:00";
+  }
+
+  async function openEditor(eventId) {
+    currentEventId = eventId;
+    document.getElementById("event-id").value = eventId || "";
+    document.getElementById("ev-title").value = "";
+    resetDateTimePickers();
+    document.getElementById("ev-location").value = "";
+    document.getElementById("ev-description").value = "";
+    document.getElementById("ev-status").value = "active";
+    document.getElementById("ev-suppress").checked = false;
+    const isNew = !eventId;
+    document.getElementById("ev-status-row").style.display = isNew ? "none" : "";
+    document.getElementById("ev-suppress-row").style.display = isNew ? "none" : "";
+    clearNotice(document.getElementById("event-msg"));
+    document.getElementById("editor-title").textContent = isNew ? "New hike" : "Edit hike";
+
+    if (eventId) {
+      const { event } = await api(`/api/events/${eventId}`);
+      document.getElementById("ev-title").value = event.title;
+      document.getElementById("editor-title").textContent = event.title;
+      const d = new Date(event.event_date);
+      document.getElementById("ev-year").value = String(d.getFullYear());
+      document.getElementById("ev-month").value = String(d.getMonth() + 1);
+      refreshDayOptions(String(d.getDate()));
+      document.getElementById("ev-time").value = snapTo5(`${pad2(d.getHours())}:${pad2(d.getMinutes())}`);
+      document.getElementById("ev-location").value = event.location || "";
+      document.getElementById("ev-description").value = event.description;
+      document.getElementById("ev-status").value = event.status;
+    }
+    document.getElementById("image-file").value = "";
+    document.getElementById("image-file").disabled = isNew;
+    document.getElementById("upload-label").style.opacity = isNew ? "0.5" : "";
+    document.getElementById("upload-label").style.pointerEvents = isNew ? "none" : "";
+    document.getElementById("upload-hint").textContent = isNew
+      ? "Save the hike first to attach photos"
+      : "uploads instantly when picked";
+    await loadImagesGrid();
+    // Reset to Details tab
+    document.querySelector('.tabbar .t[data-tab="details"]').click();
+    show("editor");
+  }
+
+  function snapTo5(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
+    const snapped = Math.floor(m / 5) * 5;
+    return `${String(h).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
+  }
+
+  document.getElementById("event-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msgEl = document.getElementById("event-msg");
+    const id = document.getElementById("event-id").value;
+
+    const desc = document.getElementById("ev-description").value.trim();
+    if (desc.length < 20) {
+      showNotice(msgEl, "error", "Description must be at least 20 characters.");
+      return;
+    }
+    const existingTiles = [...document.querySelectorAll("#existing-images [data-img-id]")];
+    const hasPrimary = existingTiles.some((t) => t.dataset.isPrimary === "1");
+    if (existingTiles.length > 0 && !hasPrimary) {
+      showNotice(msgEl, "error", "Click one of the photos to mark it as the primary photo before saving.");
+      return;
+    }
+    const y = document.getElementById("ev-year").value;
+    const mo = document.getElementById("ev-month").value;
+    const d = document.getElementById("ev-day").value;
+    const t = document.getElementById("ev-time").value;
+    const isoLocal = `${y}-${pad2(Number(mo))}-${pad2(Number(d))}T${t}`;
+    const payload = {
+      title: document.getElementById("ev-title").value.trim(),
+      event_date: new Date(isoLocal).toISOString(),
+      location: document.getElementById("ev-location").value.trim() || null,
+      description: document.getElementById("ev-description").value.trim(),
+      status: document.getElementById("ev-status").value,
+      suppress_notify: document.getElementById("ev-suppress").checked,
+    };
+
+    let res;
+    try {
+      if (id) {
+        res = await api(`/api/admin/events/${id}`, { ...authed({ method: "PUT" }), body: JSON.stringify(payload) });
+      } else {
+        res = await api("/api/admin/events", { ...authed({ method: "POST" }), body: JSON.stringify(payload) });
+        currentEventId = res.id;
+        document.getElementById("event-id").value = res.id;
+        // First save of a new hike: reveal status/suppress controls and unlock the
+        // photo uploader (it stays disabled until the event row exists).
+        document.getElementById("ev-status-row").style.display = "";
+        document.getElementById("ev-suppress-row").style.display = "";
+        document.getElementById("image-file").disabled = false;
+        document.getElementById("upload-label").style.opacity = "";
+        document.getElementById("upload-label").style.pointerEvents = "";
+        document.getElementById("upload-hint").textContent = "uploads instantly when picked";
+      }
+    } catch (err) {
+      if (err.status === 409 && err.body?.error === "time_conflict") {
+        showNotice(msgEl, "error",
+          `Time conflict — another active hike (“${err.body.conflicts_with}”) is already at this time. Pick a different time or cancel the other hike first.`);
+        return;
+      }
+      showNotice(msgEl, "error", err.message);
+      return;
+    }
+
+    let m = id ? "Saved." : "Created — you can now add photos.";
+    if (res.notified) m += ` Notified ${res.notified.recipients} (${res.notified.emails_sent} email, ${res.notified.push_sent} push).`;
+    showNotice(msgEl, "info", m);
+  });
+
+  // Instant photo upload — fires whenever files are picked. The event must already
+  // exist (the input is disabled until first save). Save is disabled during the
+  // upload so the form can't race with the in-flight request.
+  document.getElementById("image-file").addEventListener("change", async () => {
+    const input = document.getElementById("image-file");
+    const files = [...input.files];
+    if (files.length === 0) return;
+    if (!currentEventId) { input.value = ""; return; }
+
+    const label = document.getElementById("upload-label");
+    const hint = document.getElementById("upload-hint");
+    const saveBtn = document.querySelector('#event-form button[type="submit"]');
+
+    saveBtn.disabled = true;
+    label.style.pointerEvents = "none";
+    label.style.opacity = "0.6";
+    hint.textContent = `Uploading ${files.length} photo${files.length === 1 ? "" : "s"}…`;
+    try {
+      const fd = new FormData();
+      for (const f of files) fd.append("files[]", f);
+      const ur = await api(`/api/admin/events/${currentEventId}/images`,
+        { ...authed({ method: "POST" }), body: fd });
+      const n = ur.images?.length || 0;
+      hint.textContent = `Uploaded ${n} photo${n === 1 ? "" : "s"}.`;
+      input.value = "";
+      await loadImagesGrid();
+    } catch (err) {
+      hint.textContent = `Upload failed: ${err.message}`;
+    } finally {
+      saveBtn.disabled = false;
+      label.style.pointerEvents = "";
+      label.style.opacity = "";
+    }
+  });
+
+  async function loadImagesGrid() {
+    const el = document.getElementById("existing-images");
+    el.innerHTML = "";
+    if (!currentEventId) {
+      el.innerHTML = `<div class="meta" style="font-size:13px">Save the hike first to attach photos.</div>`;
+      return;
+    }
+    const { images } = await api(`/api/events/${currentEventId}`);
+    if (images.length === 0) {
+      el.innerHTML = `<div class="meta" style="font-size:13px">No photos uploaded yet.</div>`;
+      return;
+    }
+    for (const img of images) {
+      const tile = document.createElement("div");
+      tile.dataset.imgId = img.id;
+      tile.dataset.isPrimary = img.is_primary ? "1" : "0";
+      if (img.is_primary) tile.classList.add("is-primary");
+      tile.innerHTML = `
+        <img src="/img/${img.r2_key}" alt="" data-set-primary="${img.id}"
+             title="${img.is_primary ? "This is the primary photo." : "Click to set as the primary photo."}"
+             style="cursor:${img.is_primary ? "default" : "pointer"}">
+        <div class="row-tiny">
+          <span>${img.is_primary ? '<span class="star">★ Cover</span>' : ""}</span>
+          <button class="btn danger sm" data-del="${img.id}" style="padding:3px 10px;font-size:12px">Delete</button>
+        </div>
+      `;
+      el.appendChild(tile);
+    }
+    el.querySelectorAll("[data-set-primary]").forEach((imgEl) => {
+      imgEl.addEventListener("click", async () => {
+        const imgId = imgEl.dataset.setPrimary;
+        const tile = imgEl.closest("[data-img-id]");
+        if (tile?.dataset.isPrimary === "1") return;
+        await api(`/api/admin/events/${currentEventId}/images/${imgId}`,
+          { ...authed({ method: "PUT" }), body: JSON.stringify({ is_primary: true }) });
+        loadImagesGrid();
+      });
+    });
+    el.querySelectorAll("[data-del]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Delete this image?")) return;
+        await api(`/api/admin/events/${currentEventId}/images/${btn.dataset.del}`, authed({ method: "DELETE" }));
+        loadImagesGrid();
+      });
+    });
+  }
+
+  async function loadRsvps() {
+    if (!currentEventId) return;
+    const { rsvps } = await api(`/api/admin/events/${currentEventId}/rsvps`, authed());
+    const el = document.getElementById("rsvp-list");
+    document.getElementById("rsvp-count-label").textContent = ` · ${rsvps.length}`;
+    if (rsvps.length === 0) { el.innerHTML = `<p class="empty-filler">No RSVPs yet.</p>`; return; }
+    el.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>RSVP'd</th></tr></thead>
+        <tbody>${rsvps.map((r) => `
+          <tr>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.email)}</td>
+            <td><span class="chip${r.status === "maybe" ? " neutral" : (r.status === "cancelled" ? " persimmon" : "")}" style="padding:2px 9px">${escapeHtml(r.status)}</span></td>
+            <td>${escapeHtml(formatDate(r.created_at))}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById("invite-send").addEventListener("click", async () => {
+    if (!currentEventId) return;
+    const raw = document.getElementById("invite-emails").value;
+    const emails = raw.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    const resultEl = document.getElementById("invite-result");
+    if (emails.length === 0) {
+      showNotice(resultEl, "warn", "Add at least one email.");
+      return;
+    }
+    try {
+      const r = await api(`/api/admin/events/${currentEventId}/invite`, {
+        ...authed({ method: "POST" }),
+        body: JSON.stringify({ emails }),
+      });
+      let m = `Sent ${r.sent} invitation${r.sent === 1 ? "" : "s"}.`;
+      if (r.invalid_count) m += ` Skipped ${r.invalid_count} invalid address${r.invalid_count === 1 ? "" : "es"}.`;
+      showNotice(resultEl, "info", m);
+      document.getElementById("invite-emails").value = "";
+    } catch (err) {
+      showNotice(resultEl, "error", err.message);
+    }
+  });
+
+  document.getElementById("notify-send").addEventListener("click", async () => {
+    const msg = document.getElementById("notify-msg").value.trim();
+    if (!currentEventId || !msg) return;
+    try {
+      const r = await api(`/api/admin/events/${currentEventId}/notify`, {
+        ...authed({ method: "POST" }), body: JSON.stringify({ message: msg }),
+      });
+      showNotice(document.getElementById("notify-result"), "info",
+        `Sent to ${r.recipients} — ${r.emails_sent} email, ${r.push_sent} push (${r.push_pruned} dead pruned).`);
+    } catch (err) {
+      showNotice(document.getElementById("notify-result"), "error", err.message);
+    }
+  });
+
+  async function loadBroadcasts() {
+    if (!currentEventId) return;
+    const { broadcasts } = await api(`/api/admin/events/${currentEventId}/broadcasts`, authed());
+    const el = document.getElementById("bcast-list");
+    if (broadcasts.length === 0) { el.innerHTML = `<p class="empty-filler">No broadcasts sent yet.</p>`; return; }
+    el.innerHTML = broadcasts.map((b) => `
+      <div class="card" style="padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <div style="font-weight:600">${escapeHtml(b.subject)}</div>
+          <span class="chip"><span class="dot"></span> ${b.confirmed} of ${b.total} confirmed</span>
+        </div>
+        <p class="meta" style="font-size:14px;margin:8px 0 0;white-space:pre-wrap">${escapeHtml(b.body)}</p>
+        <div class="meta" style="font-size:12.5px;margin-top:6px">${escapeHtml(formatDate(b.sent_at))}</div>
+        <details style="margin-top:10px"><summary class="meta" style="font-size:13px;cursor:pointer">See per-person details</summary>
+          <div data-bcast-detail="${b.id}" style="margin-top:8px">Loading…</div>
+        </details>
+      </div>
+    `).join("");
+    el.querySelectorAll("[data-bcast-detail]").forEach((wrap) => {
+      const parent = wrap.closest("details");
+      parent.addEventListener("toggle", async () => {
+        if (!parent.open || wrap.dataset.loaded) return;
+        const { acks } = await api(`/api/admin/broadcasts/${wrap.dataset.bcastDetail}`, authed());
+        wrap.dataset.loaded = "1";
+        wrap.innerHTML = `
+          <table class="table">
+            <thead><tr><th>Name</th><th>Email</th><th>Confirmed</th></tr></thead>
+            <tbody>${acks.map((a) => `
+              <tr>
+                <td>${escapeHtml(a.name || "")}</td>
+                <td>${escapeHtml(a.email)}</td>
+                <td>${a.confirmed_at ? formatDate(a.confirmed_at) : '<span style="color:var(--muted)">not yet</span>'}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        `;
+      });
+    });
+  }
+
+  document.getElementById("bcast-send").addEventListener("click", async () => {
+    if (!currentEventId) return;
+    const subject = document.getElementById("bcast-subject").value.trim();
+    const body = document.getElementById("bcast-body").value.trim();
+    if (!subject || !body) return;
+    try {
+      const r = await api(`/api/admin/events/${currentEventId}/broadcast`, {
+        ...authed({ method: "POST" }),
+        body: JSON.stringify({ subject, body }),
+      });
+      showNotice(document.getElementById("bcast-result"), "info",
+        `Sent to ${r.recipients} — ${r.emails_sent} email, ${r.push_sent} push (${r.push_pruned} dead pruned).`);
+      document.getElementById("bcast-subject").value = "";
+      document.getElementById("bcast-body").value = "";
+      loadBroadcasts();
+    } catch (err) {
+      showNotice(document.getElementById("bcast-result"), "error", err.message);
+    }
+  });
+
+  init();
+</script>
+
+</body>
+</html>

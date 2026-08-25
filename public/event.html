@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en" data-type="serif" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hike — Daniel's Hikes</title>
+  <meta name="theme-color" content="#2C6A49">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    /* Page-scoped tweaks layered on top of the shared design system. */
+    .back-link { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 18px; font-weight: 600; white-space: nowrap; }
+    .title-block { margin-top: 24px; }
+    .title-block h1 { font-size: clamp(32px, 4.6vw, 46px); line-height: 1.05; margin: 12px 0 14px; }
+    .title-block .meta-row { font-size: 16px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+    .title-block .meta-row .count { color: var(--pine); font-weight: 600; white-space: nowrap; }
+    #description.lede { margin-top: 20px; white-space: pre-wrap; }
+    .plan-eyebrow { margin: 26px 0 10px; }
+    .plan-body { font-size: 15.5px; line-height: 1.7; }
+    .forecast-card { margin-top: 22px; padding: 18px; display: flex; gap: 14px; align-items: center; background: var(--surface-2); }
+    .forecast-card .ico { width: 22px; height: 22px; }
+    .forecast-card .meta { font-size: 14.5px; }
+
+    .rsvp-card h3 { font-size: 22px; margin-bottom: 4px; }
+    .rsvp-card .rsvp-sub { font-size: 13.5px; color: var(--ink-2); margin: 0 0 16px; }
+    .rsvp-card .seg button { cursor: pointer; }
+
+    .gallery-link-card { display: flex; gap: 13px; align-items: center; }
+    .gallery-link-card .gallery-link-title { font-weight: 600; font-size: 15px; }
+    .gallery-link-card .gallery-link-sub { font-size: 13px; }
+
+    .push-cta a { color: var(--pine-deep); font-weight: 600; text-decoration: underline; }
+
+    /* Event messages (notify + broadcast). */
+    .event-messages { display: flex; flex-direction: column; gap: 12px; margin: 18px 0 0; }
+    .event-message { padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
+    .event-message.notify { border-left: 3px solid var(--pine); }
+    .event-message.broadcast { border-left: 3px solid var(--persimmon); }
+    .event-message .msg-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--ink); }
+    .event-message .msg-body { font-size: 14.5px; color: var(--ink-2); line-height: 1.55; }
+    .event-message .msg-meta { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* Past description "see more" collapsing. */
+    #description.minimized { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .desc-toggle { display: inline-flex; align-items: center; padding: 6px 12px; margin-top: 8px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: var(--sans); }
+    .desc-toggle:hover { background: var(--surface-2); }
+
+    /* Cancellation cross-out on the hero. */
+    .d-hero.cancel-banner { position: relative; }
+    .d-hero.cancel-banner::after {
+      content: "CANCELLED"; position: absolute; inset: 0; margin: auto;
+      height: 44px; top: 50%; transform: translateY(-50%) rotate(-7deg);
+      background: rgba(194,94,58,.92); color: #fff; font-weight: 800; letter-spacing: .22em;
+      font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 4;
+    }
+
+    /* Push dialog. */
+    .push-dialog { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-l); max-width: 480px; width: calc(100vw - 32px); }
+    .push-dialog::backdrop { background: rgba(20,28,22,.45); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+    .push-dialog-form { padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+    .push-dialog-form .meta { font-size: 14.5px; }
+    .push-dialog-form .tiny { font-size: 13px; color: var(--muted); }
+    .dialog-actions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .dialog-actions .btn { flex: 1 1 auto; }
+
+    /* Lightbox. */
+    .lightbox { position: fixed; inset: 0; background: rgba(20,28,22,.92); display: grid; place-items: center; z-index: 200; padding: 24px; }
+    .lightbox[hidden] { display: none; }
+    .lightbox img { max-width: calc(100vw - 48px); max-height: calc(100vh - 48px); width: auto; height: auto; border-radius: var(--r); box-shadow: var(--shadow-l); }
+    .lightbox-close { position: fixed; top: 18px; right: 18px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; border: none; font-size: 26px; line-height: 1; cursor: pointer; }
+    .lightbox-close:hover { background: rgba(255,255,255,.25); }
+
+    /* Hero scene/img stacking. */
+    #hero-wrap .d-hero { position: relative; }
+    #hero-wrap .d-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #hero-wrap .d-hero .scene { position: absolute; inset: 0; }
+
+    /* "Solo" layout — past or cancelled hikes drop the sidebar grid and centre
+       the reading column. The aside (gallery link card if it still applies)
+       falls naturally below the main content in the single column. */
+    .detail.solo { grid-template-columns: 1fr; }
+    .detail.solo .d-main,
+    .detail.solo .sticky { max-width: 760px; margin-left: auto; margin-right: auto; width: 100%; }
+    .detail.solo .sticky { position: static; }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap bar">
+    <a class="brand" href="/"><span class="seal">산</span><b>Daniel's Hikes</b></a>
+    <nav class="navset">
+      <a class="hide-sm" href="/">All hikes</a>
+      <a class="cta" href="/admin">Admin</a>
+    </nav>
+  </div>
+</header>
+
+<main class="section">
+  <div class="wrap">
+    <a class="meta back-link" href="/">← All hikes</a>
+
+    <div id="loading" class="muted">Loading…</div>
+
+    <article id="event" class="detail" style="display:none">
+      <!-- MAIN -->
+      <div class="d-main">
+        <div id="hero-wrap">
+          <div class="d-hero">
+            <img id="hero" alt="" style="display:none">
+            <div id="hero-scene" class="scene" data-scene="dawn" data-seed="4"></div>
+          </div>
+          <div id="gallery-thumbs" class="thumbs"></div>
+        </div>
+
+        <div class="title-block">
+          <div id="eyebrow" class="eyebrow persimmon"><span class="dot"></span> <span id="eyebrow-text">Hike</span></div>
+          <h1 id="title" class="display"></h1>
+          <div id="meta" class="meta meta-row"></div>
+        </div>
+
+        <p id="cancelled-notice" class="notice error" style="display:none;margin-top:18px">This hike has been cancelled.</p>
+        <p id="past-notice" class="notice info" style="display:none;margin-top:18px">This hike has already happened.</p>
+
+        <div id="event-messages" class="event-messages" style="display:none"></div>
+
+        <p id="description" class="lede"></p>
+
+        <div class="eyebrow plan-eyebrow" style="display:none"><span class="dot"></span> The plan</div>
+        <p class="meta plan-body" style="display:none">Meet at the time and place above. Pace is moderate with plenty of breaks. Bring at least 1.5 L of water, grippy shoes, and a windproof layer for the summit.</p>
+
+        <div class="card forecast-card" style="display:none">
+          <span class="ico" data-ico="SUN"></span>
+          <div class="meta"><b style="color:var(--ink)">Forecast:</b> Check the weather closer to the date — we'll send a push alert if conditions change anything.</div>
+        </div>
+      </div>
+
+      <!-- SIDE -->
+      <aside class="sticky">
+        <div id="rsvp-card" class="card rsvp-card">
+          <h3 class="display">Join this hike</h3>
+          <p class="rsvp-sub">Your RSVP unlocks the private photo gallery — we'll email you the link.</p>
+          <form id="rsvp-form">
+            <label class="field-l" for="name">Your name</label>
+            <input class="input" id="name" type="text" required placeholder="e.g. Jiwoo Park">
+            <label class="field-l" for="email" style="margin-top:12px">Email</label>
+            <input class="input" id="email" type="email" required placeholder="you@email.com">
+            <label class="field-l" style="margin-top:14px">Coming?</label>
+            <div class="seg" role="radiogroup" id="status-seg">
+              <button type="button" data-status="going" class="on" aria-pressed="true">Going</button>
+              <button type="button" data-status="maybe" aria-pressed="false">Maybe</button>
+              <button type="button" data-status="cancelled" aria-pressed="false">Can't</button>
+            </div>
+            <input type="hidden" id="status" value="going">
+            <button type="submit" class="btn block lg" style="margin-top:16px">Save RSVP</button>
+          </form>
+          <div id="rsvp-msg" class="notice" style="display:none;margin-top:14px"></div>
+          <div class="going" style="margin-top:16px;justify-content:center">
+            <span class="meta" id="rsvp-count" style="font-size:13.5px"></span>
+          </div>
+        </div>
+
+        <div id="gallery-link-row" class="card gallery-link-card" style="padding:18px;display:none">
+          <span class="seal" data-ico="CAM" style="background:var(--pine);width:40px;height:40px;border-radius:11px"></span>
+          <div style="flex:1">
+            <div class="gallery-link-title">Private photo gallery</div>
+            <div class="meta gallery-link-sub">Open with your RSVP email</div>
+          </div>
+          <a class="btn soft sm" id="gallery-link" href="#">Open</a>
+        </div>
+
+        <div class="notice info push-cta">
+          <span class="ico" data-ico="BELL" style="width:18px;height:18px;color:var(--pine-deep)"></span>
+          <div>Get a push alert if the time or meetup point changes. <a href="#" id="push-cta-link">Turn on</a></div>
+        </div>
+      </aside>
+    </article>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="brand"><span class="seal">산</span><b>Daniel's Hikes</b></div>
+    <span class="muted">Photos auto-expire 30 days after each hike</span>
+  </div>
+</footer>
+
+<!-- Push opt-in dialog (offered after a successful RSVP, or from the sidebar CTA). -->
+<dialog id="push-dialog" class="push-dialog">
+  <form method="dialog" class="push-dialog-form">
+    <h3 class="display" style="margin:0 0 4px">Get instant change alerts?</h3>
+    <p class="meta">If this hike's time, location, or status changes, we'll send a notification to your desktop or phone — no email check needed.</p>
+    <p class="meta tiny">After you click <strong>Yes</strong>, your browser will pop up its own permission prompt — you need to click <strong>Allow</strong> there to actually turn notifications on.</p>
+    <p id="ios-push-hint" class="meta tiny" style="display:none">On iPhone/iPad you need to add this site to your Home Screen first — Safari only delivers push to installed PWAs.</p>
+    <p id="inapp-push-hint" class="meta tiny" style="display:none">Looks like you opened this from a chat app (KakaoTalk, Instagram, Messenger, etc.). Notifications don't work in those in-app browsers — tap the ⋯ menu and choose "Open in Chrome/Safari", then come back here and try again.</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="push-yes">Yes, notify me</button>
+      <button type="button" class="btn ghost" id="push-no">No thanks</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Image lightbox (click any photo on this page to enlarge). -->
+<div id="lightbox" class="lightbox" hidden>
+  <img id="lightbox-img" alt="">
+  <button id="lightbox-close" type="button" aria-label="Close" class="lightbox-close">&times;</button>
+</div>
+
+<!-- Inline-icon expansion. Runs synchronously so [data-ico] spans get their SVG before paint. -->
+<script>
+(function(){
+  var ICONS = {
+    SUN: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8"/></svg>',
+    CAM:  '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>',
+    BELL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>'
+  };
+  document.querySelectorAll('[data-ico]').forEach(function(el){
+    var k = el.getAttribute('data-ico');
+    if (ICONS[k]) el.innerHTML = ICONS[k];
+  });
+})();
+</script>
+
+<script src="/scenes.js"></script>
+
+<script type="module">
+  import { api, formatDate, subscribeForPush, showNotice } from "/js/common.js";
+
+  const eventId = location.pathname.split("/")[2];
+
+  const loading = document.getElementById("loading");
+  const article = document.getElementById("event");
+  const hero = document.getElementById("hero");
+  const heroScene = document.getElementById("hero-scene");
+  const titleEl = document.getElementById("title");
+  const metaEl = document.getElementById("meta");
+  const descEl = document.getElementById("description");
+  const eyebrowText = document.getElementById("eyebrow-text");
+  const cancelledNotice = document.getElementById("cancelled-notice");
+  const pastNotice = document.getElementById("past-notice");
+  const heroWrap = document.querySelector("#hero-wrap .d-hero");
+  const rsvpCard = document.getElementById("rsvp-card");
+  const thumbs = document.getElementById("gallery-thumbs");
+  const rsvpForm = document.getElementById("rsvp-form");
+  const rsvpMsg = document.getElementById("rsvp-msg");
+  const rsvpCount = document.getElementById("rsvp-count");
+  const pushDialog = document.getElementById("push-dialog");
+  const iosPushHint = document.getElementById("ios-push-hint");
+  const galleryLink = document.getElementById("gallery-link");
+  const galleryLinkRow = document.getElementById("gallery-link-row");
+  const statusInput = document.getElementById("status");
+  const statusSeg = document.getElementById("status-seg");
+
+  galleryLink.href = `/event/${eventId}/gallery`;
+
+  // --- Segmented status control: drives the hidden #status input the form posts.
+  statusSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-status]");
+    if (!btn) return;
+    e.preventDefault();
+    statusSeg.querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("on", b === btn);
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+    });
+    statusInput.value = btn.dataset.status;
+  });
+
+  // --- Lightbox -----------------------------------------------------------
+  const lightbox = document.getElementById("lightbox");
+  const lightboxImg = document.getElementById("lightbox-img");
+  function openLightbox(src, alt) {
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || "";
+    lightbox.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeLightbox() {
+    lightbox.hidden = true;
+    lightboxImg.src = "";
+    document.body.style.overflow = "";
+  }
+  lightbox.addEventListener("click", closeLightbox);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !lightbox.hidden) closeLightbox(); });
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[ch]));
+  }
+
+  // Pick a generative scene palette deterministically from the event id, so the
+  // same hike always shows the same placeholder art across visits.
+  const SCENES = ["dawn", "day", "dusk", "forest", "night"];
+  function sceneFor(idStr, salt = 0) {
+    let h = 0;
+    for (let i = 0; i < idStr.length; i++) h = (h * 31 + idStr.charCodeAt(i)) >>> 0;
+    return { scene: SCENES[(h + salt) % SCENES.length], seed: ((h >> 3) + salt * 7) % 1000 || 1 };
+  }
+
+  function renderHero(primary, locationLabel) {
+    if (primary) {
+      hero.src = `/img/${primary.r2_key}`;
+      hero.alt = primary.alt_text || titleEl.textContent;
+      hero.style.display = "block";
+      heroScene.style.display = "none";
+      hero.style.cursor = "zoom-in";
+      hero.addEventListener("click", () => openLightbox(hero.src, hero.alt));
+    } else {
+      const { scene, seed } = sceneFor(eventId);
+      heroScene.setAttribute("data-scene", scene);
+      heroScene.setAttribute("data-seed", String(seed));
+      // scenes.js paints all [data-scene] elements on load and tags them with
+      // __painted to skip repaints. We're changing the attrs after that pass, so
+      // reset the flag and drop the existing SVG before re-asking it to paint.
+      heroScene.__painted = false;
+      const oldSvg = heroScene.querySelector("svg");
+      if (oldSvg) oldSvg.remove();
+      if (locationLabel) {
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = locationLabel;
+        heroScene.appendChild(label);
+      }
+      if (window.paintScenes) window.paintScenes();
+    }
+  }
+
+  function renderThumbs(rest) {
+    thumbs.innerHTML = "";
+    if (rest.length > 0) {
+      for (const img of rest) {
+        const el = document.createElement("img");
+        el.src = `/img/${img.r2_key}`;
+        el.alt = img.alt_text || "";
+        el.style.aspectRatio = "1";
+        el.style.objectFit = "cover";
+        el.style.borderRadius = "10px";
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => openLightbox(el.src, el.alt));
+        thumbs.appendChild(el);
+      }
+    } else {
+      // No real photos yet — show 5 generative scene placeholders for visual rhythm,
+      // matching the design mock's thumb strip.
+      for (let i = 0; i < 5; i++) {
+        const { scene, seed } = sceneFor(eventId, i + 1);
+        const div = document.createElement("div");
+        div.className = "scene";
+        div.setAttribute("data-scene", scene);
+        div.setAttribute("data-seed", String(seed));
+        thumbs.appendChild(div);
+      }
+      if (window.paintScenes) window.paintScenes();
+    }
+  }
+
+  let event, images;
+  try {
+    const data = await api(`/api/events/${eventId}`);
+    event = data.event; images = data.images || [];
+    loading.style.display = "none";
+    article.style.display = "grid";
+
+    titleEl.textContent = event.title;
+    document.title = `${event.title} — Daniel's Hikes`;
+
+    const primary = images.find((i) => i.is_primary) || images[0];
+    renderHero(primary, event.location);
+
+    const isCancelled = event.status === "cancelled";
+    const eventTime = new Date(event.event_date).getTime();
+    const isPast = eventTime < Date.now();
+    const daysSinceEvent = (Date.now() - eventTime) / 86400000;
+    // Same "today" window as the home page buckets — anything scheduled from
+    // tomorrow onward is "upcoming" and shouldn't expose the gallery yet.
+    const startOfTomorrow = new Date(new Date().setHours(0, 0, 0, 0) + 86400000);
+    const isUpcoming = new Date(event.event_date) >= startOfTomorrow;
+    const startOfToday = new Date(new Date().setHours(0, 0, 0, 0));
+    const isToday = !isPast && new Date(event.event_date) < startOfTomorrow;
+    const goingVerb = isPast ? "went" : "going";
+
+    // Eyebrow: "Today · Saturday May 31" / "Upcoming · …" / "Past · …" / "Cancelled".
+    const dayLabel = new Date(event.event_date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    let bucket = "Upcoming";
+    if (isCancelled) bucket = "Cancelled";
+    else if (isToday) bucket = "Today";
+    else if (isPast) bucket = "Past";
+    eyebrowText.textContent = `${bucket} · ${dayLabel}`;
+
+    metaEl.innerHTML = `${escapeHtml(formatDate(event.event_date))}${
+      event.location ? ` · ${escapeHtml(event.location)}` : ""
+    } · <span class="count">${data.rsvp_count} ${goingVerb}</span>`;
+    rsvpCount.textContent = `${data.rsvp_count} ${goingVerb} so far`;
+    descEl.textContent = event.description;
+
+    if (isCancelled) {
+      cancelledNotice.style.display = "block";
+      heroWrap.classList.add("cancel-banner");
+    } else if (isPast) {
+      pastNotice.style.display = "block";
+      descEl.classList.add("minimized");
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "desc-toggle";
+      toggle.textContent = "See more";
+      toggle.addEventListener("click", () => {
+        const expanded = descEl.classList.toggle("minimized") === false;
+        toggle.textContent = expanded ? "See less" : "See more";
+      });
+      descEl.after(toggle);
+    }
+    // Block RSVPs for cancelled or past hikes — hide the form entirely.
+    if (isCancelled || isPast) rsvpCard.style.display = "none";
+    // Show the gallery link only on today's hike and on past hikes within 30 days.
+    if (!isCancelled && !isUpcoming && daysSinceEvent <= 30) {
+      galleryLinkRow.style.display = "flex";
+    }
+
+    // Past/cancelled hikes: collapse to a single centred reading column. The
+    // RSVP card is gone, push alerts are pointless (no changes coming), so the
+    // sticky sidebar shouldn't take up the right third. The gallery link card,
+    // if it still applies, falls naturally below the main content.
+    if (isCancelled || isPast) {
+      article.classList.add("solo");
+      document.querySelector(".push-cta").style.display = "none";
+      // If nothing's left in the sidebar, drop it entirely so there's no gap.
+      if (galleryLinkRow.style.display === "none") {
+        document.querySelector(".sticky").style.display = "none";
+      }
+    }
+
+    // Notify + Broadcast messages: shown on today/upcoming hikes only, newest first.
+    const isPreviousDay = new Date(event.event_date) < startOfToday;
+    if (!isPreviousDay && Array.isArray(data.messages) && data.messages.length > 0) {
+      const wrap = document.getElementById("event-messages");
+      for (const m of data.messages) {
+        const div = document.createElement("div");
+        div.className = "event-message " + (m.kind === "notify" ? "notify" : "broadcast");
+        const titleHtml = m.kind === "broadcast"
+          ? `<div class="msg-title">${escapeHtml(m.subject)}</div>` : "";
+        div.innerHTML = `
+          ${titleHtml}
+          <div class="msg-body">${escapeHtml(m.body).replaceAll("\n", "<br>")}</div>
+          <div class="msg-meta">${escapeHtml(formatDate(m.sent_at))}</div>
+        `;
+        wrap.appendChild(div);
+      }
+      wrap.style.display = "flex";
+    }
+
+    // Build the thumb strip from real images (everything except the hero).
+    const rest = primary ? images.filter((i) => i.id !== primary.id) : [];
+    renderThumbs(rest);
+  } catch (err) {
+    loading.textContent = "Couldn't load this hike: " + err.message;
+  }
+
+  // Push opt-in dialog hints: in-app browser (KakaoTalk etc.) takes priority because
+  // there's no path to push from inside a chat-app webview at all. Otherwise show the
+  // iOS hint for users on Safari who haven't installed the PWA to their Home Screen.
+  const ua = navigator.userAgent;
+  const isInAppBrowser = /KAKAOTALK|Instagram|FBAV|FBAN|FB_IAB|Line\/|Twitter|NAVER\(inapp/i.test(ua);
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isInAppBrowser) {
+    document.getElementById("inapp-push-hint").style.display = "block";
+  } else if (isIOS && !standalone) {
+    iosPushHint.style.display = "block";
+  }
+
+  // Proof-of-email token from the latest successful RSVP in this session.
+  // /api/push/subscribe requires it, so the sidebar "Turn on" path only works
+  // after an RSVP has been saved (which is also how we know the email is real).
+  let pushToken = null;
+
+  document.getElementById("push-no").addEventListener("click", () => pushDialog.close());
+  document.getElementById("push-yes").addEventListener("click", async () => {
+    pushDialog.close();
+    if (!pushToken) {
+      showNotice(rsvpMsg, "warn", "Save your RSVP first (that's how we verify your email), then turn on alerts.");
+      return;
+    }
+    try {
+      await subscribeForPush(pushToken);
+      showNotice(rsvpMsg, "info", "You'll get a push notification if this hike changes.");
+    } catch (err) {
+      showNotice(rsvpMsg, "warn", err.message);
+    }
+  });
+
+  // Sidebar "Turn on" link opens the same opt-in dialog.
+  document.getElementById("push-cta-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    pushDialog.showModal();
+  });
+
+  // RSVP submit — after a successful save, ask about push notifications.
+  rsvpForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById("name").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      status: statusInput.value,
+    };
+    try {
+      const r = await api(`/api/events/${eventId}/rsvp`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      pushToken = r.push_token || null;
+      if (r.status === "cancelled") {
+        showNotice(rsvpMsg, "info", "RSVP cancelled.");
+      } else {
+        showNotice(rsvpMsg, "info", "RSVP saved — check your email for your gallery link.");
+        pushDialog.showModal();
+      }
+    } catch (err) {
+      showNotice(rsvpMsg, "error", "Couldn't save RSVP: " + err.message);
+    }
+  });
+</script>
+
+</body>
+</html>

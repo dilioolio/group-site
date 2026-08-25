@@ -1,0 +1,17 @@
+{
+  "name": "group-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted group events site (Cloudflare Workers + D1 + KV + Resend) — deploy with one click, configure in the browser",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

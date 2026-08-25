@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" data-type="serif" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Set up your site</title>
+  <meta name="theme-color" content="#2C6A49">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    .setup-card { max-width: 560px; margin: 40px auto; padding: 28px; }
+    .setup-card h1 { font-family: var(--display); font-weight: 500; font-size: 28px; margin: 0 0 4px; }
+    .setup-card .field-l { margin-top: 16px; }
+    .hint { color: var(--muted); font-size: 13px; margin-top: 5px; line-height: 1.45; }
+    .hint a { color: var(--pine-deep); }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap bar">
+    <span class="brand"><b>Group Site</b></span>
+  </div>
+</header>
+
+<main class="section">
+  <div class="wrap">
+    <section class="card setup-card">
+      <div class="eyebrow"><span class="dot"></span> One-time setup</div>
+      <h1>Set up your site</h1>
+      <p class="meta">Takes about two minutes. Everything here can be changed later in the admin area.</p>
+
+      <form id="setup-form">
+        <label class="field-l" for="site_name">Site name</label>
+        <input class="input" id="site_name" placeholder="Daniel's Hikes" required>
+        <div class="hint">Shown in the header, on the home-screen icon and in emails.</div>
+
+        <label class="field-l" for="admin_name">Your first name</label>
+        <input class="input" id="admin_name" placeholder="Daniel" required>
+        <div class="hint">Emails are signed with this and sent as "<i>Name</i> &lt;your address&gt;".</div>
+
+        <label class="field-l" for="password">Admin password</label>
+        <input class="input" id="password" type="password" minlength="8" required autocomplete="new-password">
+        <div class="hint">At least 8 characters. You'll use this to log in at <b>/admin</b>. Write it down — it can't be recovered, only reset by deleting the site.</div>
+
+        <label class="field-l" for="from_email">Sending email address</label>
+        <input class="input" id="from_email" type="email" placeholder="events@yourdomain.com" required>
+        <div class="hint">Must be on a domain you've added to Resend. This is the address members see mail from.</div>
+
+        <label class="field-l" for="reply_to">Reply-to address (optional)</label>
+        <input class="input" id="reply_to" type="email" placeholder="you@gmail.com">
+        <div class="hint">Where replies land. Leave blank to use the sending address.</div>
+
+        <label class="field-l" for="resend_api_key">Resend API key</label>
+        <input class="input" id="resend_api_key" placeholder="re_…" required autocomplete="off">
+        <div class="hint">From <a href="https://resend.com/api-keys" target="_blank" rel="noopener">resend.com/api-keys</a> → Create API key → copy the value starting with <b>re_</b>.</div>
+
+        <label class="field-l" for="timezone">Timezone</label>
+        <input class="input" id="timezone" required>
+        <div class="hint">Filled in from your browser. Event times in emails and alerts use this.</div>
+
+        <div style="display:flex;margin-top:22px"><button class="btn block lg" id="go" type="submit">Finish setup</button></div>
+      </form>
+      <div id="msg" class="notice" style="display:none;margin-top:16px"></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  import { api, showNotice } from "/js/common.js";
+
+  const $ = (id) => document.getElementById(id);
+  try { $("timezone").value = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { $("timezone").value = "UTC"; }
+
+  const ERRORS = {
+    password_too_short: "The password needs at least 8 characters.",
+    missing_name: "Please enter your first name.",
+    bad_from_email: "The sending email address doesn't look valid.",
+    bad_reply_to: "The reply-to address doesn't look valid.",
+    bad_resend_key: "The Resend API key should start with re_ — copy it again from resend.com/api-keys.",
+    bad_timezone: "That timezone isn't recognised. Use a name like Europe/Dublin or Asia/Seoul.",
+    resend_key_rejected: "Resend rejected that API key. Create a new one at resend.com/api-keys (full access) and paste it again.",
+    already_set_up: "This site is already set up. Go to /admin to log in.",
+  };
+
+  $("setup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("go"); btn.disabled = true; btn.textContent = "Setting up…";
+    const body = {};
+    for (const id of ["site_name", "admin_name", "password", "from_email", "reply_to", "resend_api_key", "timezone"]) body[id] = $(id).value;
+    try {
+      const r = await api("/api/setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const warn = r.domain_status !== "verified"
+        ? ` Note: Resend reports your sending domain as "${r.domain_status}" — emails won't go out until its DNS records are verified in Resend.`
+        : "";
+      showNotice($("msg"), warn ? "warn" : "info", "All set!" + warn + " Taking you to the admin login…");
+      setTimeout(() => { location.href = "/admin"; }, warn ? 6000 : 1500);
+    } catch (err) {
+      showNotice($("msg"), "error", ERRORS[err.body?.error] || err.message);
+      btn.disabled = false; btn.textContent = "Finish setup";
+    }
+  });
+</script>
+</body>
+</html>
