@@ -4,6 +4,7 @@
 
 import { Hono } from "hono";
 import { requireAdmin } from "../lib/auth.js";
+import { checkResend } from "./setup.js";
 import { saveConfig, hashPassword } from "../lib/config.js";
 import { jsonError, isValidEmail } from "../lib/utils.js";
 import {
@@ -121,4 +122,33 @@ siteRoutes.delete("/api/admin/assets/:name", requireAdmin(), async (c) => {
   await c.env.PHOTOS.delete(`site-assets/${name}`);
   await c.env.DB.prepare("DELETE FROM config WHERE key = ?").bind(`ASSET_${name}`).run();
   return c.json({ ok: true });
+});
+
+// Self-check: everything that can silently break, in one call, with a plain
+// status the Settings → Status tab renders. Hits Resend live (one request).
+siteRoutes.get("/api/admin/health", requireAdmin(), async (c) => {
+  const env = c.env;
+  const checks = [];
+  const add = (id, ok, detail) => checks.push({ id, ok, detail });
+
+  add("site_url", true, env.SITE_URL);
+  add("push_keys", !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.SESSION_SIGNING_KEY), null);
+  add("from_email", !!env.FROM_EMAIL, env.FROM_EMAIL || null);
+
+  if (!env.RESEND_API_KEY) {
+    add("resend_key", false, "no_key");
+    add("resend_domain", false, "no_key");
+  } else if (env.SKIP_RESEND_CHECK) {
+    add("resend_key", true, "skipped"); add("resend_domain", true, "skipped");
+  } else {
+    let r;
+    try { r = await checkResend(env.RESEND_API_KEY, env.FROM_EMAIL || "x@invalid"); }
+    catch { r = { keyOk: true, domainStatus: "unreachable" }; }
+    add("resend_key", r.keyOk, r.keyOk ? null : "rejected");
+    add("resend_domain", r.keyOk && r.domainStatus === "verified", r.domainStatus || null);
+  }
+
+  const subs = (await env.DB.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").first())?.n || 0;
+  const events = (await env.DB.prepare("SELECT COUNT(*) AS n FROM events").first())?.n || 0;
+  return c.json({ ok: checks.every((x) => x.ok), checks, push_subscriptions: subs, events, schema_version: env.SCHEMA_VERSION || null });
 });

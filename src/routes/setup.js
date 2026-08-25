@@ -30,7 +30,7 @@ setupRoutes.get("/setup", (c) => c.env.ASSETS.fetch(new Request(new URL("/setup.
 // Ask Resend whether the key works and whether the sending domain is verified.
 // A bad key blocks setup; an unverified domain is only a warning because DNS
 // records take a while to propagate and the user can fix it later.
-async function checkResend(apiKey, fromEmail) {
+export async function checkResend(apiKey, fromEmail) {
   const res = await fetch("https://api.resend.com/domains", { headers: { Authorization: `Bearer ${apiKey}` } });
   // Resend answers 400 "API key is invalid" (not 401) for a bad key; treat any
   // 4xx as rejected and only 5xx/network trouble as "can't tell right now".

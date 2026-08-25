@@ -107,6 +107,7 @@
           <button class="btn" id="new-event-btn">+ New event</button>
         </div>
       </div>
+      <div id="health-banner" class="notice warn" style="display:none;margin-bottom:16px"></div>
       <div class="stack" id="events-list" style="gap:14px"></div>
     </section>
 
@@ -262,6 +263,7 @@
         <div class="t" data-stab="categories">Categories</div>
         <div class="t" data-stab="appearance">Appearance</div>
         <div class="t" data-stab="account">Email &amp; password</div>
+        <div class="t" data-stab="status">Status</div>
       </div>
 
       <section class="spane on" data-spane="general">
@@ -322,6 +324,14 @@
             </div>
           </div>
           <div id="s-assets-msg" class="notice" style="display:none;margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section class="spane" data-spane="status">
+        <div class="card" style="padding:22px;max-width:720px">
+          <p class="meta" style="margin:0 0 14px">A live check of everything that has to be right for emails and alerts to go out. Green means working.</p>
+          <div id="health-list" class="stack" style="gap:10px"><p class="muted">Checking…</p></div>
+          <div style="display:flex;gap:12px;margin-top:16px"><button class="btn ghost" id="health-refresh">Check again</button></div>
         </div>
       </section>
 
@@ -397,6 +407,7 @@
       <li><strong>Categories</strong> — e.g. Hikes and Conversations. Shown as tabs on the home page when you have more than one. Each can have its own image and a default for whether events get a photo gallery.</li>
       <li><strong>Appearance</strong> — colour presets or your own three colours, home-screen icon, background image.</li>
       <li><strong>Email &amp; password</strong> — sending address, reply-to, Resend key, admin password.</li>
+      <li><strong>Status</strong> — live check of the Resend key, domain verification and push keys, with what to do if something's red. The dashboard shows a banner when emails can't go out.</li>
     </ul>
 
     <h3>Photos on an event</h3>
@@ -506,6 +517,7 @@
       await refreshEvents();
       await loadCategories();
       show("dash");
+      healthBanner();
     } catch (err) {
       if (err.status === 401) { sessionStorage.removeItem("admin_token"); token = ""; show("login"); }
       else throw err;
@@ -1237,6 +1249,52 @@
       file.value = "";
     });
   });
+
+  // ===================== STATUS / SELF-CHECK =====================
+  const HEALTH_TEXT = {
+    site_url:      { ok: "Site address", fix: "" },
+    push_keys:     { ok: "Push notification keys are set", fix: "Push keys are missing — this shouldn't happen after setup. Delete the SETUP_COMPLETE row in the config table (see README) and run setup again; existing keys are kept." },
+    from_email:    { ok: "Sending address is set", fix: "No sending address. Set one under Email & password." },
+    resend_key:    { ok: "Resend accepts the API key", fix: "Resend is rejecting the API key. Create a new key at resend.com/api-keys (Full access) and paste it under Email & password." },
+    resend_domain: { ok: "Sending domain is verified in Resend", fix: "" },
+  };
+  function domainFix(detail) {
+    if (detail === "missing") return "The domain in your sending address isn't added to Resend. In Resend go to Domains → Add domain, add the DNS records it shows, then wait for Verified.";
+    if (detail === "not_started" || detail === "pending") return "Domain is added to Resend but not verified yet. Check the DNS records in Resend → Domains — they can take up to a day to propagate.";
+    if (detail === "failed") return "Resend says domain verification failed. Open Resend → Domains and compare the DNS records with what your DNS provider has.";
+    if (detail === "unreachable") return "Couldn't reach Resend just now. Try again in a minute.";
+    if (detail === "no_key") return "No Resend API key set — emails won't send. Add one under Email & password.";
+    return `Resend reports the domain as "${detail}". Emails won't send until it's Verified.`;
+  }
+  async function loadHealth() {
+    const list = $("health-list");
+    let h;
+    try { h = await api("/api/admin/health", authed()); } catch (err) { list.innerHTML = `<p class="notice error">Check failed: ${escapeHtml(err.message)}</p>`; return null; }
+    list.innerHTML = h.checks.map((c) => {
+      const t = HEALTH_TEXT[c.id];
+      const fix = c.ok ? "" : (c.id === "resend_domain" ? domainFix(c.detail) : t.fix);
+      return `<div class="notice ${c.ok ? "info" : "error"}" style="display:block">
+        <b>${c.ok ? "✓" : "✗"} ${escapeHtml(t.ok)}</b>${c.id === "site_url" ? ` — ${escapeHtml(c.detail)}` : ""}
+        ${fix ? `<div style="margin-top:4px;font-size:13.5px">${escapeHtml(fix)}</div>` : ""}
+      </div>`;
+    }).join("") + `<p class="meta" style="font-size:13px;margin-top:6px">${h.events} events · ${h.push_subscriptions} devices subscribed to push alerts</p>`;
+    return h;
+  }
+  $("health-refresh").addEventListener("click", loadHealth);
+  document.querySelector('[data-stab="status"]').addEventListener("click", loadHealth);
+
+  // Dashboard banner: only the checks that stop mail going out.
+  async function healthBanner() {
+    try {
+      const h = await api("/api/admin/health", authed());
+      const bad = h.checks.filter((c) => !c.ok && c.id !== "site_url");
+      const el = $("health-banner");
+      if (!bad.length) { el.style.display = "none"; return; }
+      el.innerHTML = `<span>Emails may not be going out — ${bad.length === 1 ? "one thing needs" : bad.length + " things need"} attention. <a href="#" id="health-open" style="text-decoration:underline">See what's wrong</a></span>`;
+      el.style.display = "flex";
+      $("health-open").addEventListener("click", async (e) => { e.preventDefault(); await openSettings(); document.querySelector('[data-stab="status"]').click(); });
+    } catch { /* banner is best-effort */ }
+  }
 </script>
 
 </body>
